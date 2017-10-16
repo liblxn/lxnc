@@ -1,0 +1,13 @@
+{
+	"comment": "",
+	"ignore": "test",
+	"package": [
+		{
+			"checksumSHA1": "pZwhZ1xzLCMdUUCMQm33IGy36W4=",
+			"path": "github.com/tsne/msgpack-go",
+			"revision": "5ad35bb7e7ecd43cbe4dd965f7a7af2f8a6e9065",
+			"revisionTime": "2017-09-24T08:44:04Z"
+		}
+	],
+	"rootPath": "github.com/tsne/lxnc"
+}

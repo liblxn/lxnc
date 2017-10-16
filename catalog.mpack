@@ -1,0 +1,184 @@
+package lxn
+
+
+// Catalog holds the data for a message catalog which included localized
+// messages and the locale information needed to format numbers and plurals.
+struct Catalog {
+	Version  int        `1`
+	Locale   Locale     `2`
+	Messages []Message  `3`
+}
+
+// Symbols holds all symbols that are used to format a number in a specific locale.
+struct Symbols {
+	Decimal string  `1`
+	Group   string  `2`
+	Percent string  `3`
+	Minus   string  `4`
+	Inf     string  `5`
+	Nan     string  `6`
+	Zero    uint32  `7`
+}
+
+// NumberFormat holds all relevant information to format a number in a specific locale.
+struct NumberFormat {
+	Symbols                  Symbols  `1`
+	PositivePrefix           string   `2`
+	PositiveSuffix           string   `3`
+	NegativePrefix           string   `4`
+	NegativeSuffix           string   `5`
+	MinIntegerDigits         int      `6`
+	MinFractionDigits        int      `7`
+	MaxFractionDigits        int      `8`
+	PrimaryIntegerGrouping   int      `9`
+	SecondaryIntegerGrouping int      `10`
+	FractionGrouping         int      `11`
+}
+
+// PluralTag is an enumeration of supported plural types. Each plural tag
+// can have its own translation text.
+enum PluralTag {
+	Zero   `0`
+	One    `1`
+	Two    `2`
+	Few    `3`
+	Many   `4`
+	Other  `5`
+}
+
+// Operand represents an operand in a plural rule.
+enum Operand {
+	AbsoluteValue         `0` // n
+	IntegerDigits         `1` // i
+	NumFracDigits         `2` // v
+	NumFracDigitsNoZeros  `3` // w
+	FracDigits            `4` // f
+	FracDigitsNoZeros     `5` // t
+}
+
+// Connective represents a logical connective for two plural rules. A plural rule
+// can be connected with another rule by a conjunction ('and' operator) or a
+// disjunction ('or' operator). The conjunction binds more tightly.
+enum Connective {
+	None         `0`
+	Conjunction  `1`
+	Disjunction  `2`
+}
+
+// Range represents an integer range, where both bounds are inclusive.
+// If the lower bound equals the upper bound, the range will collapse
+// to a single value.
+struct Range {
+	LowerBound int  `1`
+	UpperBound int  `2`
+}
+
+// PluralRule holds the data for a single plural rule. The Modulo field defines the
+// modulo divisor for the operand. If Modulo is zero, no remainder has to be calculated.
+//
+// The plural rule could be connected with another rule. If so, the Connective field is
+// set to the respective value (Conjunction or Disjunction). Otherwise the Connective
+// field is set to None and there is no follow-up rule.
+//
+// Example for a plural rule: i%10=1..3
+struct PluralRule {
+	Operand    Operand     `1`
+	Modulo     int         `2`
+	Negate     bool        `3`
+	Ranges     []Range     `4`
+	Connective Connective  `5`
+}
+
+// Plural represents a single plural form. It holds a collection of plural rules
+// for a specific plural tag where all rules are connected with each other (see
+// Rule and Connective).
+struct Plural {
+	Tag   PluralTag     `1`
+	Rules []PluralRule  `2`
+}
+
+// Locale holds the data which is necessary to format data in a region
+// specific format.
+struct Locale {
+	ID              string         `1`
+	DecimalFormat   NumberFormat   `2`
+	MoneyFormat     NumberFormat   `3`
+	PercentFormat   NumberFormat   `4`
+	CardinalPlurals []Plural       `5`
+	OrdinalPlurals  []Plural       `6`
+}
+
+// Message holds the data for a single message. Each message contains of
+// a list of fragments which has to be concatenated to receive the message
+// test. If the message does not contain any replacement variables, there
+// will only be one string fragment.
+struct Message {
+	Section      string         `1`
+	Key          string         `2`
+	Text         []string       `3`
+	Replacements []Replacement  `4`
+}
+
+// Replacement describes a variable piece of text in a message which will be replaced
+// during runtime. The key defines the variable's name which will be passed. The type
+// contains more details about the particular replacement.
+struct Replacement {
+	Key     string              `1`
+	TextPos int                 `2`
+	Type    ReplacementType     `3`
+	Details ReplacementDetails  `4`
+}
+
+// ReplacementDetails holds the details for particular replacements. The special Empty
+// branch indicates that there a no details for the replacement type.
+union ReplacementDetails {
+	EmptyDetails   `1`
+	MoneyDetails   `2`
+	PluralDetails  `3`
+	SelectDetails  `4`
+}
+
+// ReplacementType describes the type of a replacement. Each type contains the details
+// necessary to render the variable's value.
+enum ReplacementType {
+	StringReplacement   `1`
+	NumberReplacement   `2`
+	PercentReplacement  `3`
+	MoneyReplacement    `4`
+	PluralReplacement   `5`
+	SelectReplacement   `6`
+}
+
+// PluralType is an enumeration for the types of a plural form.
+enum PluralType {
+	Cardinal  `0`
+	Ordinal   `1`
+}
+
+
+// EmptyDetails describes a special type for a replacement that has no further
+// details attached.
+struct EmptyDetails {
+}
+
+// MoneyDetails contains the replacement details for amounts of money.
+struct MoneyDetails {
+	Currency string  `1`
+}
+
+// PluralDetails contains the replacement details for plurals. Depending on the
+// variable, different text for each plural rule can be selected. It contains
+// the variants for the supported plural tags and custom overwrites.
+struct PluralDetails {
+	Type     PluralType             `1`
+	Variants map[PluralTag]Message  `2`
+	Custom   map[int64]Message      `3`
+}
+
+// SelectDetails contains the replacement details to select a text fragment
+// depending on the given variable. The fallback is an optional value which
+// describes the default case.
+struct SelectDetails {
+	Cases    map[string]Message  `1`
+	Fallback string              `2`
+}
