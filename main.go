@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	msgpack "github.com/tsne/msgpack-go"
+	msgpack "github.com/mprot/msgpack-go"
 
 	"github.com/liblxn/lxnc/locale"
 	"github.com/liblxn/lxnc/lxn"

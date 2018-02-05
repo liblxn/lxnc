@@ -1,3 +1,3 @@
-//go:generate mpackc go -out lxn/ catalog.mpack
+//go:generate mprotc go -out lxn/ catalog.mprot
 
 package main
