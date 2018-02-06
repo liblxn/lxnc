@@ -14,7 +14,7 @@ var _ = fmt.Errorf
 var _ time.Time
 var _ *msgpack.Writer
 
-// Catalog holds the data for a message catalog which included localized
+// Catalog holds the data for a message catalog which includes localized
 // messages and the locale information needed to format numbers and plurals.
 type Catalog struct {
 	Version  int
@@ -100,7 +100,7 @@ func (o *Catalog) DecodeMsgpack(r *msgpack.Reader) error {
 	return nil
 }
 
-// Symbols holds all symbols that are used to format a number in a specific locale.
+// Symbols holds all the symbols that are used to format a number in a specific locale.
 type Symbols struct {
 	Decimal string
 	Group   string
@@ -439,9 +439,9 @@ func (o *Operand) DecodeMsgpack(r *msgpack.Reader) error {
 	return nil
 }
 
-// Connective represents a logical connective for two plural rules. A plural rule
-// can be connected with another rule by a conjunction ('and' operator) or a
-// disjunction ('or' operator). The conjunction binds more tightly.
+// Connective represents a logical connective for two plural rules. Two plural
+// rules can be connected by a conjunction ('and' operator) or a disjunction
+// ('or' operator). The conjunction binds more tightly.
 type Connective int
 
 // Enumerators for Connective.
@@ -854,10 +854,10 @@ func (o *Locale) DecodeMsgpack(r *msgpack.Reader) error {
 	return nil
 }
 
-// Message holds the data for a single message. Each message contains of
-// a list of fragments which has to be concatenated to receive the message
-// test. If the message does not contain any replacement variables, there
-// will only be one string fragment.
+// Message holds the data for a single message. Each message consists of
+// a list of fragments which has to be concatenated to receive the final
+// message text. If the message does not contain any replacement variables,
+// there will only be a single string fragment.
 type Message struct {
 	Section      string
 	Key          string
@@ -971,7 +971,7 @@ func (o *Message) DecodeMsgpack(r *msgpack.Reader) error {
 }
 
 // Replacement describes a variable piece of text in a message which will be replaced
-// during runtime. The key defines the variable's name which will be passed. The type
+// during runtime. The key defines the variable's name which will be passed in. The type
 // contains more details about the particular replacement.
 type Replacement struct {
 	Key     string
@@ -1053,8 +1053,8 @@ func (o *Replacement) DecodeMsgpack(r *msgpack.Reader) error {
 	return nil
 }
 
-// ReplacementDetails holds the details for particular replacements. The special Empty
-// branch indicates that there a no details for the replacement type.
+// ReplacementDetails holds the details for particular replacements. The special
+// EmptyDetails branch indicates that there a no details for the replacement type.
 type ReplacementDetails struct {
 	Value interface{} // EmptyDetails, MoneyDetails, PluralDetails, or SelectDetails
 }

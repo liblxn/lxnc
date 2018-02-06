@@ -3,6 +3,12 @@
 	"ignore": "test",
 	"package": [
 		{
+			"checksumSHA1": "6YR1//+jfP+84jTGjiliCHroMGY=",
+			"path": "github.com/liblxn/lxn/schema/golang",
+			"revision": "97416a497b883d6c2af6c9c6dafac2eb090b04c3",
+			"revisionTime": "2018-02-06T18:40:47Z"
+		},
+		{
 			"checksumSHA1": "OdbO9bJn6K+OLZf5l3TYgZXXKxA=",
 			"path": "github.com/mprot/msgpack-go",
 			"revision": "76fbd9f3f904198ec8b5c525a67eefd5a06bdb81",
