@@ -1,9 +1,13 @@
 package cldr
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/liblxn/lxnc/internal/filetree"
+)
 
 func TestDecodeData(t *testing.T) {
-	ftree := memoryFileTree{
+	files := filetree.Memory(map[string]string{
 		"ignored": `no xml contents`,
 
 		"common/main/de.xml": `<?xml version="1.0" encoding="UTF-8" ?>
@@ -52,9 +56,9 @@ func TestDecodeData(t *testing.T) {
 				</territoryContainment>
 			</supplementalData>
 		`,
-	}
+	})
 
-	data, err := decodeData(ftree)
+	data, err := Decode(files)
 	switch {
 	case err != nil:
 		t.Errorf("unexpected error: %v", err)
@@ -100,14 +104,14 @@ func TestDataParentIdentity(t *testing.T) {
 func TestDataDefaultNumberingSystem(t *testing.T) {
 	data := &Data{
 		Identities: map[string]Identity{
-			"root":         Identity{Language: "root"},
-			"parent":       Identity{Language: "parent"},
-			"parent-child": Identity{Language: "parent", Territory: "child"},
+			"root":         {Language: "root"},
+			"parent":       {Language: "parent"},
+			"parent-child": {Language: "parent", Territory: "child"},
 		},
 		Numbers: map[string]Numbers{
-			"root":         Numbers{DefaultSystem: "root-numsys"},
-			"parent":       Numbers{DefaultSystem: "parent-numsys"},
-			"parent-child": Numbers{DefaultSystem: ""},
+			"root":         {DefaultSystem: "root-numsys"},
+			"parent":       {DefaultSystem: "parent-numsys"},
+			"parent-child": {DefaultSystem: ""},
 		},
 	}
 
@@ -127,48 +131,48 @@ func TestDataDefaultNumberingSystem(t *testing.T) {
 	}
 }
 
-func TestDataFullNumberSymbols(t *testing.T) {
+func TestDataNumberSymbols(t *testing.T) {
 	const numsys = "numsys"
 
 	data := &Data{
 		Identities: map[string]Identity{
-			"root":         Identity{Language: "root"},
-			"parent":       Identity{Language: "parent"},
-			"parent-child": Identity{Language: "parent", Territory: "child"},
+			"root":         {Language: "root"},
+			"parent":       {Language: "parent"},
+			"parent-child": {Language: "parent", Territory: "child"},
 		},
 		Numbers: map[string]Numbers{
-			"root": Numbers{
+			"root": {
 				Symbols: map[string]NumberSymbols{
-					numsys: NumberSymbols{Decimal: "dec"},
+					numsys: {Decimal: "dec"},
 				},
 			},
-			"parent": Numbers{
+			"parent": {
 				Symbols: map[string]NumberSymbols{
-					numsys: NumberSymbols{Group: "group"},
+					numsys: {Group: "group"},
 				},
 			},
-			"parent-child": Numbers{
+			"parent-child": {
 				Symbols: map[string]NumberSymbols{
-					numsys: NumberSymbols{Percent: "percent"},
+					numsys: {Percent: "percent"},
 				},
 			},
 		},
 	}
 
 	expected := NumberSymbols{Decimal: "dec"}
-	symbols := data.FullNumberSymbols(data.Identities["root"], numsys)
+	symbols := data.NumberSymbols(data.Identities["root"], numsys)
 	if symbols != expected {
 		t.Errorf("unexpected number symbols for root: %#v", symbols)
 	}
 
 	expected.Group = "group"
-	symbols = data.FullNumberSymbols(data.Identities["parent"], numsys)
+	symbols = data.NumberSymbols(data.Identities["parent"], numsys)
 	if symbols != expected {
 		t.Errorf("unexpected number symbols for parent: %#v", symbols)
 	}
 
 	expected.Percent = "percent"
-	symbols = data.FullNumberSymbols(data.Identities["parent-child"], numsys)
+	symbols = data.NumberSymbols(data.Identities["parent-child"], numsys)
 	if symbols != expected {
 		t.Errorf("unexpected number symbols for child: %#v", symbols)
 	}

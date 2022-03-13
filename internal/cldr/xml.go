@@ -5,6 +5,8 @@ import (
 	"io"
 	"strconv"
 	"unicode/utf8"
+
+	"github.com/liblxn/lxnc/internal/errors"
 )
 
 type decodeFunc func(*xmlDecoder, xml.StartElement)
@@ -100,12 +102,12 @@ func (d *xmlDecoder) ReadChar(parent xml.StartElement) rune {
 	r, n := utf8.DecodeRune(p)
 	if r == utf8.RuneError {
 		if n != 0 {
-			d.ReportErr(errorString("invalid utf8 encoding"), parent)
+			d.ReportErr(errors.New("invalid utf8 encoding"), parent)
 		}
 		return 0
 	}
 	if n != len(p) {
-		d.ReportErr(errorString("single character expected"), parent)
+		d.ReportErr(errors.New("single character expected"), parent)
 	}
 	return r
 }
@@ -114,7 +116,7 @@ func (d *xmlDecoder) ReadInt(parent xml.StartElement) int {
 	p := d.readBytes(parent)
 	n, err := strconv.ParseInt(string(p), 10, 64)
 	if err != nil {
-		d.ReportErr(errorString("integer expected"), parent)
+		d.ReportErr(errors.New("integer expected"), parent)
 	}
 	return int(n)
 }
@@ -122,9 +124,9 @@ func (d *xmlDecoder) ReadInt(parent xml.StartElement) int {
 func (d *xmlDecoder) ReportErr(err error, parent xml.StartElement) {
 	if d.err == nil || d.err == io.EOF {
 		if tag := parent.Name.Local; tag != "" {
-			d.err = errorf("%s (<%s>): %v", d.file, tag, err)
+			d.err = errors.Newf("%s (<%s>): %v", d.file, tag, err)
 		} else {
-			d.err = errorf("%s: %v", d.file, err)
+			d.err = errors.Newf("%s: %v", d.file, err)
 		}
 	}
 }
@@ -134,7 +136,7 @@ func (d *xmlDecoder) readBytes(parent xml.StartElement) []byte {
 	if cdata, ok := tok.(xml.CharData); ok {
 		return cdata
 	}
-	d.ReportErr(errorString("character data expected"), parent)
+	d.ReportErr(errors.New("character data expected"), parent)
 	return nil
 }
 
@@ -142,14 +144,13 @@ func (d *xmlDecoder) token() xml.Token {
 	if d.err != nil {
 		return nil
 	}
-	for {
-		tok, err := d.d.Token()
-		if err != nil {
-			d.ReportErr(err, xml.StartElement{})
-			return nil
-		}
-		return tok
+
+	tok, err := d.d.Token()
+	if err != nil {
+		d.ReportErr(err, xml.StartElement{})
+		return nil
 	}
+	return tok
 }
 
 func xmlAttrib(elem xml.StartElement, name string) string {

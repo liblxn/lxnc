@@ -1,0 +1,4 @@
+github.com/liblxn/lxn v0.0.0-20180305104122-145ba432ed92 h1:h7ZC/H1IVEHT0c2/MLDis7/w/4d1arOn0uTnlSrOiE0=
+github.com/liblxn/lxn v0.0.0-20180305104122-145ba432ed92/go.mod h1:hs2PBg9w4hrB5o7VMiBTSw98A0v9UniSc/xlQgRhfF0=
+github.com/mprot/msgpack-go v0.0.0-20190328064246-b4dc4b954ff0 h1:z1Gq7v4OXK84Pb7Nw+df0V/NQt2KzdoarRm+dU1Bp58=
+github.com/mprot/msgpack-go v0.0.0-20190328064246-b4dc4b954ff0/go.mod h1:J6xgpoCDhT54IW+rgZ7PoxQI2lbJpQ0Tp0rmZNUZ27s=

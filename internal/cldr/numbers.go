@@ -5,6 +5,8 @@ import (
 	"io"
 	"strings"
 	"unicode/utf8"
+
+	"github.com/liblxn/lxnc/internal/errors"
 )
 
 // Placeholders for the number format prefixes and suffixes.
@@ -292,7 +294,7 @@ func (n *NumberFormat) decodeFormat(d *xmlDecoder, elem xml.StartElement) {
 	d.DecodeElem("pattern", func(d *xmlDecoder, elem xml.StartElement) {
 		pattern := d.ReadString(elem)
 		if *n, err = parser.parse(pattern); err != nil {
-			d.ReportErr(errorf("error parsing pattern %q: %v", pattern, err), elem)
+			d.ReportErr(errors.Newf("error parsing pattern %q: %v", pattern, err), elem)
 		}
 		d.SkipElem()
 	})
@@ -358,7 +360,7 @@ func (p *numberFormatParser) parsePadding(pos PaddingPos) {
 	if p.ch == '*' {
 		p.next()
 		if p.ch == utf8.RuneError {
-			p.seterr(errorString("expected padding character"))
+			p.seterr(errors.New("expected padding character"))
 			return
 		}
 		p.nf.Padding.Char = p.ch
@@ -509,7 +511,7 @@ func (p *numberFormatParser) next() {
 		if n == 0 {
 			p.seterr(io.EOF)
 		} else {
-			p.seterr(errorString("invalid utf-8 encoding"))
+			p.seterr(errors.New("invalid utf-8 encoding"))
 		}
 		return
 	}

@@ -188,12 +188,12 @@ func TestPluralRuleString(t *testing.T) {
 		},
 		IntegerSample: PluralSample{
 			Ranges: []FloatRange{
-				FloatRange{LowerBound: 1, UpperBound: 2},
+				{LowerBound: 1, UpperBound: 2},
 			},
 		},
 		DecimalSample: PluralSample{
 			Ranges: []FloatRange{
-				FloatRange{LowerBound: 1, UpperBound: 2, Decimals: 1},
+				{LowerBound: 1, UpperBound: 2, Decimals: 1},
 			},
 		},
 	}

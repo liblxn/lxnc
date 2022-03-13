@@ -1,12 +1,12 @@
 package lxn
 
 import (
-	"fmt"
 	"strconv"
 	"strings"
 	"unicode"
 
 	schema "github.com/liblxn/lxn/schema/golang"
+	"github.com/liblxn/lxnc/internal/errors"
 )
 
 type parser struct {
@@ -321,8 +321,7 @@ func (p *parser) expect(typ tokenType) {
 }
 
 func (p *parser) errorf(format string, args ...interface{}) {
-	err := errorString(fmt.Sprintf(format, args...))
-	p.errs.add(err, p.tok.pos)
+	p.errs.add(errors.Newf(format, args...), p.tok.pos)
 }
 
 func (p *parser) next() {

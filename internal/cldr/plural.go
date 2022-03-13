@@ -8,6 +8,8 @@ import (
 	"strings"
 	"unicode"
 	"unicode/utf8"
+
+	"github.com/liblxn/lxnc/internal/errors"
 )
 
 // Available plural tags.
@@ -66,9 +68,10 @@ func (p *PluralRules) decode(d *xmlDecoder, elem xml.StartElement) {
 			tag = Other
 		}
 
-		var parser pluralRuleParser
-		if rule, err := parser.parse(d.ReadString(elem)); err != nil {
-			d.ReportErr(errorf("error in plural rule %s: %v", tag, err), elem)
+		parser := pluralRuleParser{}
+		ruleStr := d.ReadString(elem)
+		if rule, err := parser.parse(ruleStr); err != nil {
+			d.ReportErr(errors.Newf("error in plural rule %s (%s): %v", tag, ruleStr, err), elem)
 		} else {
 			p.Rules[tag] = rule
 		}
@@ -81,12 +84,14 @@ type Operand rune
 
 // Available operands for the plural rules.
 const (
-	AbsoluteValue               Operand = 'n'
-	IntegerDigits               Operand = 'i'
-	FracDigitCountTrailingZeros Operand = 'v'
-	FracDigitCount              Operand = 'w'
-	FracDigitsTrailingZeros     Operand = 'f'
-	FracDigits                  Operand = 't'
+	AbsoluteValue               Operand = 'n' // absolute value of the source number
+	IntegerDigits               Operand = 'i' // integer digits of n
+	FracDigitCountTrailingZeros Operand = 'v' // number of visible fraction digits in n, with trailing zeros
+	FracDigitCount              Operand = 'w' // number of visible fraction digits in n, without trailing zeros
+	FracDigitsTrailingZeros     Operand = 'f' // visible fraction digits in n, with trailing zeros
+	FracDigits                  Operand = 't' // visible fraction digits in n, without trailing zeros
+	CompactDecimalExponent      Operand = 'c' // compact decimal exponent value: exponent of the power of 10 used in compact decimal formatting
+	CompactDecimalExponent2     Operand = 'e' // currently, synonym for ‘c’. however, may be redefined in the future.
 )
 
 // Operator represents an operator in a plural rule.
@@ -152,19 +157,19 @@ func (r *Relation) String() string {
 }
 
 func (r *Relation) writeTo(w io.Writer) {
-	io.WriteString(w, string(r.Operand))
+	_, _ = io.WriteString(w, string(r.Operand))
 	if r.Modulo != 0 {
-		io.WriteString(w, " % "+strconv.FormatInt(int64(r.Modulo), 10))
+		_, _ = io.WriteString(w, " % "+strconv.FormatInt(int64(r.Modulo), 10))
 	}
 
-	io.WriteString(w, " "+string(r.Operator)+" ")
+	_, _ = io.WriteString(w, " "+string(r.Operator)+" ")
 
 	needComma := false
 	for _, rng := range r.Ranges {
 		if needComma {
-			io.WriteString(w, ", ")
+			_, _ = io.WriteString(w, ", ")
 		}
-		io.WriteString(w, rng.String())
+		_, _ = io.WriteString(w, rng.String())
 		needComma = true
 	}
 }
@@ -184,7 +189,7 @@ func (c Conjunction) writeTo(w io.Writer) {
 	needAnd := false
 	for _, rel := range c {
 		if needAnd {
-			io.WriteString(w, " and ")
+			_, _ = io.WriteString(w, " and ")
 		}
 		rel.writeTo(w)
 		needAnd = true
@@ -209,13 +214,13 @@ func (s *PluralSample) writeTo(w io.Writer) {
 	needComma := false
 	for _, rng := range s.Ranges {
 		if needComma {
-			io.WriteString(w, ", ")
+			_, _ = io.WriteString(w, ", ")
 		}
-		io.WriteString(w, rng.String())
+		_, _ = io.WriteString(w, rng.String())
 		needComma = true
 	}
 	if s.Infinite {
-		io.WriteString(w, ", …")
+		_, _ = io.WriteString(w, ", …")
 	}
 }
 
@@ -239,37 +244,44 @@ func (r *PluralRule) writeTo(w io.Writer) {
 	needOr := false
 	for _, conj := range r.Condition {
 		if needOr {
-			io.WriteString(w, " or ")
+			_, _ = io.WriteString(w, " or ")
 		}
 		conj.writeTo(w)
 		needOr = true
 	}
 
 	if len(r.IntegerSample.Ranges) != 0 {
-		io.WriteString(w, " @integer ")
+		_, _ = io.WriteString(w, " @integer ")
 		r.IntegerSample.writeTo(w)
 	}
 	if len(r.DecimalSample.Ranges) != 0 {
-		io.WriteString(w, " @decimal ")
+		_, _ = io.WriteString(w, " @decimal ")
 		r.DecimalSample.writeTo(w)
 	}
 }
 
-// rule         = condition samples
+// rule            = condition samples
 //
-// condition    = conjunction ('or' conjunction)*
-// conjunction  = relation ('and' relation)*
-// relation     = expr ('=' | '!=') ranges
-// ranges       = (value'..'value | value) (',' ranges)*
-// expr         = operand ('%' value)?
-// value        = digit+
-// digit        = 0|1|2|3|4|5|6|7|8|9
+// condition       = and_condition ('or' and_condition)*
+// and_condition   = relation ('and' relation)*
+// relation        = is_relation | in_relation | within_relation
+// is_relation     = expr 'is' ('not')? value
+// in_relation     = expr (('not')? 'in' | '=' | '!=') range_list
+// within_relation = expr ('not')? 'within' range_list
+// expr            = operand (('mod' | '%') value)?
+// operand         = 'n' | 'i' | 'f' | 't' | 'v' | 'w' | 'c' | 'e'
+// range_list      = (range | value) (',' range_list)*
+// range           = value'..'value
+// value           = digit+
 //
-// samples      = ('@integer' sample)?
-//                ('@decimal' sample)?
-// sample       = sampleRange (',' sampleRange)* (',' ('…'|'...'))?
-// sampleRange  = decimalValue ('~' decimalValue)?
-// decimalValue = value ('.' value)?
+// samples         = ('@integer' sampleList)?
+//                   ('@decimal' sampleList)?
+// sampleList      = sampleRange (',' sampleRange)* (',' ('…'|'...'))?
+// sampleRange     = sampleValue ('~' sampleValue)?
+// sampleValue     = value ('.' value)? ([ce] digitPos digit+)?
+//
+// digit           = [0-9]
+// digitPos        = [1-9]
 type pluralRuleParser struct {
 	s   string
 	off int
@@ -285,7 +297,7 @@ func (p *pluralRuleParser) parse(s string) (PluralRule, error) {
 
 	rule := p.parseRule()
 	if p.err != io.EOF {
-		p.seterr(errorf("unexpected token: %q", p.ch))
+		p.seterr(errors.Newf("unexpected token: %q", p.ch))
 	} else {
 		p.err = nil
 	}
@@ -303,12 +315,12 @@ func (p *pluralRuleParser) parseRule() (rule PluralRule) {
 		switch p.ch {
 		case 'i':
 			p.expect('i', 'n', 't', 'e', 'g', 'e', 'r')
-			rule.IntegerSample = p.parseSample()
+			rule.IntegerSample = p.parseSampleList()
 		case 'd':
 			p.expect('d', 'e', 'c', 'i', 'm', 'a', 'l')
-			rule.DecimalSample = p.parseSample()
+			rule.DecimalSample = p.parseSampleList()
 		default:
-			p.seterr(errorString("invalid sample identifier"))
+			p.seterr(errors.New("invalid sample identifier"))
 			return
 		}
 	}
@@ -317,7 +329,7 @@ func (p *pluralRuleParser) parseRule() (rule PluralRule) {
 
 func (p *pluralRuleParser) parseCondition() (cond []Conjunction) {
 	for {
-		cond = append(cond, p.parseConjunction())
+		cond = append(cond, p.parseAndCondition())
 		if p.ch != 'o' {
 			return
 		}
@@ -325,8 +337,8 @@ func (p *pluralRuleParser) parseCondition() (cond []Conjunction) {
 	}
 }
 
-// conjunction
-func (p *pluralRuleParser) parseConjunction() (conj Conjunction) {
+// and_condition
+func (p *pluralRuleParser) parseAndCondition() (conj Conjunction) {
 	for {
 		conj = append(conj, p.parseRelation())
 		if p.ch != 'a' {
@@ -339,6 +351,10 @@ func (p *pluralRuleParser) parseConjunction() (conj Conjunction) {
 // relation
 func (p *pluralRuleParser) parseRelation() (rel Relation) {
 	p.parseExpr(&rel)
+
+	// For backward compatibility it is allowed to additionally
+	// use 'not in/within'.
+	// We only support the preferred syntax here ('=' and '!=')
 	switch p.ch {
 	case '=':
 		p.next()
@@ -347,32 +363,18 @@ func (p *pluralRuleParser) parseRelation() (rel Relation) {
 		p.expect('!', '=')
 		rel.Operator = NotEqual
 	default:
-		p.seterr(errorString("invalid operator"))
+		p.seterr(errors.New("invalid operator"))
 		return
 	}
 
-	rel.Ranges = p.parseRanges()
+	rel.Ranges = p.parseRangeList()
 	return
 }
 
-// ranges
-func (p *pluralRuleParser) parseRanges() (ranges []IntRange) {
-	var ok bool
+// range_list
+func (p *pluralRuleParser) parseRangeList() (ranges []IntRange) {
 	for {
-		var rng IntRange
-		if rng.LowerBound, ok = p.parseValue(); !ok {
-			p.seterr(errorString("lower bound value expected"))
-			return nil
-		}
-		if p.ch != '.' {
-			rng.UpperBound = rng.LowerBound
-		} else {
-			p.expect('.', '.')
-			if rng.UpperBound, ok = p.parseValue(); !ok {
-				p.seterr(errorString("upper bound value expected"))
-				return nil
-			}
-		}
+		rng := p.parseRange()
 		if n := len(ranges); n != 0 && (ranges[n-1].UpperBound == rng.LowerBound || ranges[n-1].UpperBound+1 == rng.LowerBound) {
 			ranges[n-1].UpperBound = rng.UpperBound
 		} else {
@@ -386,15 +388,36 @@ func (p *pluralRuleParser) parseRanges() (ranges []IntRange) {
 	}
 }
 
+// range
+func (p *pluralRuleParser) parseRange() (rng IntRange) {
+	var ok bool
+	if rng.LowerBound, ok = p.parseValue(); !ok {
+		p.seterr(errors.New("lower bound value expected"))
+		return
+	}
+	if p.ch != '.' {
+		rng.UpperBound = rng.LowerBound
+	} else {
+		p.expect('.', '.')
+		if rng.UpperBound, ok = p.parseValue(); !ok {
+			p.seterr(errors.New("upper bound value expected"))
+		}
+	}
+	return
+}
+
 // expr
 func (p *pluralRuleParser) parseExpr(rel *Relation) {
 	switch op := Operand(p.ch); op {
-	case AbsoluteValue, IntegerDigits, FracDigitCountTrailingZeros, FracDigitCount, FracDigitsTrailingZeros, FracDigits:
+	case AbsoluteValue, IntegerDigits, FracDigitCountTrailingZeros, FracDigitCount, FracDigitsTrailingZeros, FracDigits, CompactDecimalExponent, CompactDecimalExponent2:
 		rel.Operand = op
 	default:
-		p.seterr(errorf("invalid operand %q", op))
+		p.seterr(errors.Newf("invalid operand %q", op))
 		return
 	}
+
+	// For backward compatibility it is allowed to use '%' and 'mod'.
+	// We only support the preferred syntax here ('%')
 
 	p.next()
 	if p.ch == '%' {
@@ -402,7 +425,7 @@ func (p *pluralRuleParser) parseExpr(rel *Relation) {
 		if mod, ok := p.parseValue(); ok {
 			rel.Modulo = mod
 		} else {
-			p.seterr(errorString("module value expected"))
+			p.seterr(errors.New("module value expected"))
 		}
 	}
 }
@@ -422,8 +445,8 @@ func (p *pluralRuleParser) parseValue() (val int, ok bool) {
 	}
 }
 
-// sample
-func (p *pluralRuleParser) parseSample() (s PluralSample) {
+// sampleList
+func (p *pluralRuleParser) parseSampleList() (s PluralSample) {
 	for {
 		s.Ranges = append(s.Ranges, p.parseSampleRange())
 		if p.ch != ',' {
@@ -446,14 +469,14 @@ func (p *pluralRuleParser) parseSample() (s PluralSample) {
 // sampleRange
 func (p *pluralRuleParser) parseSampleRange() (rng FloatRange) {
 	var ok bool
-	if rng.LowerBound, rng.Decimals, ok = p.parseDecimalValue(); ok {
+	if rng.LowerBound, rng.Decimals, ok = p.parseSampleValue(); ok {
 		if p.ch != '~' {
 			rng.UpperBound = rng.LowerBound
 		} else {
 			p.next()
 			var decimals int
-			if rng.UpperBound, decimals, ok = p.parseDecimalValue(); !ok {
-				p.seterr(errorString("decimal value expected"))
+			if rng.UpperBound, decimals, ok = p.parseSampleValue(); !ok {
+				p.seterr(errors.New("decimal value expected"))
 			} else if rng.Decimals < decimals {
 				rng.Decimals = decimals
 			}
@@ -462,33 +485,41 @@ func (p *pluralRuleParser) parseSampleRange() (rng FloatRange) {
 	return
 }
 
-// decimalValue
-func (p *pluralRuleParser) parseDecimalValue() (val float64, decimals int, ok bool) {
-	var (
-		buf           bytes.Buffer
-		countDecimals bool
-	)
-	for {
-		switch p.ch {
-		case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '.':
-			if p.ch == '.' {
-				countDecimals = true
-			} else if countDecimals {
-				decimals++
-			}
-			buf.WriteRune(p.ch)
-			p.next()
-		default:
-			val, err := strconv.ParseFloat(buf.String(), 64)
-			return val, decimals, err == nil && buf.Len() != 0
-		}
+// sampleValue
+func (p *pluralRuleParser) parseSampleValue() (val float64, decimals int, ok bool) {
+	var buf bytes.Buffer
+
+	_ = p.readDigits(&buf, '0')
+	if p.ch == '.' {
+		buf.WriteRune(p.ch)
+		p.next()
+		decimals = p.readDigits(&buf, '0')
 	}
+
+	if p.ch == 'c' || p.ch == 'e' {
+		buf.WriteByte('e')
+		p.next()
+		_ = p.readDigits(&buf, '1') // first digits must not be '0'
+		_ = p.readDigits(&buf, '0') // read the rest
+	}
+
+	val, err := strconv.ParseFloat(buf.String(), 64)
+	return val, decimals, err == nil && buf.Len() != 0
+}
+
+func (p *pluralRuleParser) readDigits(buf *bytes.Buffer, lowerDigit rune) (count int) {
+	for lowerDigit <= p.ch && p.ch <= '9' {
+		buf.WriteRune(p.ch)
+		count++
+		p.next()
+	}
+	return
 }
 
 func (p *pluralRuleParser) expect(chars ...rune) {
 	for _, ch := range chars {
 		if p.ch != ch {
-			p.seterr(errorf("unexpected token %q", p.ch))
+			p.seterr(errors.Newf("unexpected token %q", p.ch))
 			return
 		}
 		p.next()
@@ -508,7 +539,7 @@ func (p *pluralRuleParser) next() {
 			if n == 0 {
 				p.seterr(io.EOF)
 			} else {
-				p.seterr(errorString("invalid utf-8 encoding"))
+				p.seterr(errors.New("invalid utf-8 encoding"))
 			}
 			return
 		}

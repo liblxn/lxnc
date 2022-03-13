@@ -5,7 +5,7 @@ import (
 
 	schema "github.com/liblxn/lxn/schema/golang"
 
-	"github.com/liblxn/lxnc/locale"
+	"github.com/liblxn/lxnc/internal/locale"
 )
 
 type input struct {

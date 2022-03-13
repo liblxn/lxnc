@@ -1,9 +1,13 @@
 package lxn
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/liblxn/lxnc/internal/errors"
+)
 
 func TestErrorString(t *testing.T) {
-	err := errorString("foobar")
+	err := errors.New("foobar")
 	if msg := err.Error(); msg != "foobar" {
 		t.Errorf("unexpected error message: %q", msg)
 	}
@@ -11,7 +15,7 @@ func TestErrorString(t *testing.T) {
 
 func TestError(t *testing.T) {
 	err := &Error{
-		Err: errorString("foobar"),
+		Err: errors.New("foobar"),
 		Pos: Pos{
 			File:   "file",
 			Offset: 12,
@@ -35,7 +39,7 @@ func TestErrorList(t *testing.T) {
 		t.Errorf("unexpected error message: %q", msg)
 	}
 
-	errs.add(errorString("foo"), Pos{Offset: 12, Line: 2, Column: 4})
+	errs.add(errors.New("foo"), Pos{Offset: 12, Line: 2, Column: 4})
 	if err := errs.err(); err == nil {
 		t.Error("expected error, got none")
 	}
@@ -43,7 +47,7 @@ func TestErrorList(t *testing.T) {
 		t.Errorf("unexpected error message: %q", msg)
 	}
 
-	errs.add(errorString("bar"), Pos{Offset: 16, Line: 3, Column: 1})
+	errs.add(errors.New("bar"), Pos{Offset: 16, Line: 3, Column: 1})
 	if err := errs.err(); err == nil {
 		t.Error("expected error, got none")
 	}

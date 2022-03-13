@@ -2,12 +2,6 @@ package lxn
 
 import "fmt"
 
-type errorString string
-
-func (e errorString) Error() string {
-	return string(e)
-}
-
 // Error represents a parsing error with an additional error position.
 type Error struct {
 	Err error // underlying error
