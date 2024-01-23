@@ -218,9 +218,10 @@ func (g *generator) generateSnippets(data *cldr.Data) map[string]snippet {
 
 func iterateIdentities(data *cldr.Data, iter func(cldr.Identity)) {
 	for _, id := range data.Identities {
-		if !skipIdentity(id) {
-			iter(normalizeIdentity(id))
+		if skipIdentity(id) {
+			continue
 		}
+		iter(normalizeIdentity(id))
 	}
 }
 

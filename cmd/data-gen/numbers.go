@@ -122,10 +122,10 @@ func (l patternLookup) generate(p *printer) {
 	p.Println(`type patternLookup []pattern`)
 	p.Println()
 	p.Println(`func (l patternLookup) pattern(id patternID) pattern {`)
-	p.Println(`	if id == 0 || int(id) > len(l) {`)
-	p.Println(`		return 0`)
+	p.Println(`	if 0 < id && int(id) <= len(l) {`)
+	p.Println(`		return l[id-1]`)
 	p.Println(`	}`)
-	p.Println(`	return l[id-1]`)
+	p.Println(`	return 0`)
 	p.Println(`}`)
 }
 
@@ -280,8 +280,10 @@ func (v *patternLookupVar) generate(p *printer) {
 		patternBits = 16
 	case patternBits <= 32:
 		patternBits = 32
-	default:
+	case patternBits <= 64:
 		patternBits = 64
+	default:
+		panic("pattern bits exceeded")
 	}
 	digitsPerPattern := patternBits / 4
 	perLine := lineLength / (digitsPerPattern + 4) // additional "0x" and ", "

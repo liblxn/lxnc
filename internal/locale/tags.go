@@ -105,17 +105,9 @@ func (l regionLookup) regionID(str []byte) regionID {
 // tag id is an 1-based index of this list.
 type tag uint32
 
-func (t tag) langID() langID {
-	return langID((t >> 16) & 0xff)
-}
-
-func (t tag) scriptID() scriptID {
-	return scriptID((t >> 8) & 0xff)
-}
-
-func (t tag) regionID() regionID {
-	return regionID(t & 0xff)
-}
+func (t tag) langID() langID     { return langID((t >> 16) & 0xff) }
+func (t tag) scriptID() scriptID { return scriptID((t >> 8) & 0xff) }
+func (t tag) regionID() regionID { return regionID(t & 0xff) }
 
 type tagID uint16
 

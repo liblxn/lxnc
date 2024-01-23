@@ -10,7 +10,7 @@ import (
 )
 
 func main() {
-	cldrData := flag.String("cldr-data", "", "path to the directory containing the CLDR data")
+	cldrData := flag.String("cldr-data", "data/cldr", "path to the directory containing the CLDR data")
 	cldrVersion := flag.String("cldr-version", "<local>", "the version of the CLDR data")
 	outDir := flag.String("out", "localedata", "path to the output directory")
 	pkg := flag.String("pkg", "localedata", "name of the package")

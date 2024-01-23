@@ -17,6 +17,7 @@ func (l _multiString) emptyString(funcs []string) string {
 
 func (l _multiString) newString(str ...string) (string, int) {
 	offsets := ""
+	concat := ""
 	off := 0
 	for _, s := range str {
 		if len(s) > math.MaxUint8 {
@@ -24,8 +25,9 @@ func (l _multiString) newString(str ...string) (string, int) {
 		}
 		off += len(s)
 		offsets += fmt.Sprintf(`\x%02x`, off)
+		concat += s
 	}
-	return offsets + strings.Join(str, ""), len(str) + off
+	return offsets + concat, len(str) + off
 }
 
 func (l _multiString) imports(offsetBits uint) []string {

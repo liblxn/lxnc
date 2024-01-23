@@ -1,38 +1,49 @@
-package main
+package generate_cldr
 
 import (
 	"fmt"
 
 	"github.com/liblxn/lxnc/internal/cldr"
+	"github.com/liblxn/lxnc/internal/generator"
+)
+
+var (
+	_ generator.Snippet     = (*numberFormat)(nil)
+	_ generator.TestSnippet = (*numberFormat)(nil)
 )
 
 type numberFormat struct {
-	decimalNumbers *numbersLookupVar
-	moneyNumbers   *numbersLookupVar
-	percentNumbers *numbersLookupVar
-	affixes        *affixLookupVar
+	decimal *numbersLookupVar
+	money   *numbersLookupVar
+	percent *numbersLookupVar
+	affixes *affixLookupVar
+	tag     *tagLookup
 }
 
-func newNumberFormat(decimalNumbers, moneyNumbers, percentNumbers *numbersLookupVar, affixes *affixLookupVar) *numberFormat {
+func newNumberFormat(
+	decimal *numbersLookupVar,
+	money *numbersLookupVar,
+	percent *numbersLookupVar,
+	affixes *affixLookupVar,
+	tag *tagLookup,
+) *numberFormat {
 	return &numberFormat{
-		decimalNumbers: decimalNumbers,
-		moneyNumbers:   moneyNumbers,
-		percentNumbers: percentNumbers,
-		affixes:        affixes,
+		decimal: decimal,
+		money:   money,
+		percent: percent,
+		affixes: affixes,
+		tag:     tag,
 	}
 }
 
-func (n *numberFormat) imports() []string {
+func (n *numberFormat) Imports() []string {
 	return nil
 }
 
-func (n *numberFormat) generate(p *printer) {
-	// There should be no difference which numbers variable we use here, since
-	// every numbers variable should hold the same reference to patterns, symbols,
-	// and zeros.
-	patterns := n.decimalNumbers.patterns.name
-	symbols := n.decimalNumbers.symbols.name
-	zeros := n.decimalNumbers.zeros.name
+func (n *numberFormat) Generate(p *generator.Printer) {
+	patterns := n.decimal.patterns.name
+	symbols := n.decimal.symbols.name
+	zeros := n.decimal.zeros.name
 	affixes := n.affixes.name
 
 	p.Println(`// Grouping holds the sizes for number groups for a specific locale.`)
@@ -67,17 +78,17 @@ func (n *numberFormat) generate(p *printer) {
 	p.Println()
 	p.Println(`// DecimalFormat returns the data for formatting decimal numbers in the given locale.`)
 	p.Println(`func DecimalFormat(loc Locale) NumberFormat {`)
-	p.Println(`	return lookupNumberFormat(loc, `, n.decimalNumbers.name, `, false)`)
+	p.Println(`	return lookupNumberFormat(loc, `, n.decimal.name, `, false)`)
 	p.Println(`}`)
 	p.Println()
 	p.Println(`// MoneyFormat returns the data for formatting currency values in the given locale.`)
 	p.Println(`func MoneyFormat(loc Locale) NumberFormat {`)
-	p.Println(`	return lookupNumberFormat(loc, `, n.moneyNumbers.name, `, true)`)
+	p.Println(`	return lookupNumberFormat(loc, `, n.money.name, `, true)`)
 	p.Println(`}`)
 	p.Println()
 	p.Println(`// PercentFormat returns the data for formatting percent values in the given locale.`)
 	p.Println(`func PercentFormat(loc Locale) NumberFormat {`)
-	p.Println(`	return lookupNumberFormat(loc, `, n.percentNumbers.name, `, false)`)
+	p.Println(`	return lookupNumberFormat(loc, `, n.percent.name, `, false)`)
 	p.Println(`}`)
 	p.Println()
 	p.Println(`func lookupNumberFormat(loc Locale, lookup numbersLookup, currency bool) NumberFormat {`)
@@ -161,35 +172,35 @@ func (n *numberFormat) generate(p *printer) {
 	p.Println(`}`)
 }
 
-func (n *numberFormat) testImports() []string {
+func (n *numberFormat) TestImports() []string {
 	return []string{"reflect"}
 }
 
-func (n *numberFormat) generateTest(p *printer) {
+func (n *numberFormat) GenerateTest(p *generator.Printer) {
 	newLocale := func(nums *numbersLookupVar, id cldr.Identity) string {
-		return fmt.Sprintf("%#0[2]*[1]x", nums.tags.tagID(id), tagIDBits/4)
+		return fmt.Sprintf("%#0[2]*[1]x", nums.tags.tagID(id), n.tag.idBits/4)
 	}
 
-	newNumberFormatData := func(nums *numbersLookupVar, nf cldr.NumberFormat, symb cldr.NumberSymbols, numsys cldr.NumberingSystem, money bool) string {
-		decimal := symb.Decimal
-		group := symb.Group
+	newNumbersData := func(data numbersData, money bool) string {
+		decimal := data.symb.Decimal
+		group := data.symb.Group
 		if money {
-			decimal = symb.CurrencyDecimal
-			group = symb.CurrencyGroup
+			decimal = data.symb.CurrencyDecimal
+			group = data.symb.CurrencyGroup
 		}
 		return fmt.Sprintf(`{Symbols{"%s", "%s", "%s", "%s", "%s", "%s", '%c'}, Affixes{"%s", "%s"}, Affixes{"%s", "%s"}, %d, %d, %d, Grouping{%d, %d}, Grouping{%d, %d}}`,
-			decimal, group, symb.Percent, symb.Minus, symb.Infinity, symb.NaN, numsys.Digits[0],
-			nf.PositivePrefix, nf.PositiveSuffix, nf.NegativePrefix, nf.NegativeSuffix,
-			nf.MinIntegerDigits, nf.MinFractionDigits, nf.MaxFractionDigits,
-			nf.IntegerGrouping.PrimarySize, nf.IntegerGrouping.SecondarySize,
-			nf.FractionGrouping.PrimarySize, nf.FractionGrouping.SecondarySize,
+			decimal, group, data.symb.Percent, data.symb.Minus, data.symb.Infinity, data.symb.NaN, data.numsys.Digits[0],
+			data.nf.PositivePrefix, data.nf.PositiveSuffix, data.nf.NegativePrefix, data.nf.NegativeSuffix,
+			data.nf.MinIntegerDigits, data.nf.MinFractionDigits, data.nf.MaxFractionDigits,
+			data.nf.IntegerGrouping.PrimarySize, data.nf.IntegerGrouping.SecondarySize,
+			data.nf.FractionGrouping.PrimarySize, data.nf.FractionGrouping.SecondarySize,
 		)
 	}
 
 	printNumbers := func(nums *numbersLookupVar, money bool) {
-		nums.iterateNumbers(func(id cldr.Identity, nf cldr.NumberFormat, symb cldr.NumberSymbols, numsys cldr.NumberingSystem) {
-			p.Println(`		`, newLocale(nums, id), `: `, newNumberFormatData(nums, nf, symb, numsys, money), `,`)
-		})
+		for _, data := range nums.data {
+			p.Println(`		`, newLocale(nums, data.id), `: `, newNumbersData(data, money), `,`)
+		}
 	}
 
 	p.Println(`type numberFormatData struct {`)
@@ -206,17 +217,17 @@ func (n *numberFormat) generateTest(p *printer) {
 	p.Println(`func TestLookupNumberFormat(t *testing.T) {`)
 	p.Println(`	// decimal formats`)
 	p.Println(`	testNumberFormatLookup(t, DecimalFormat, map[Locale]numberFormatData{`)
-	printNumbers(n.decimalNumbers, false)
+	printNumbers(n.decimal, false)
 	p.Println(`	})`)
 	p.Println()
 	p.Println(`	// money formats`)
 	p.Println(`	testNumberFormatLookup(t, MoneyFormat, map[Locale]numberFormatData{`)
-	printNumbers(n.moneyNumbers, true)
+	printNumbers(n.money, true)
 	p.Println(`	})`)
 	p.Println()
 	p.Println(`	// percent formats`)
 	p.Println(`	testNumberFormatLookup(t, PercentFormat, map[Locale]numberFormatData{`)
-	printNumbers(n.percentNumbers, false)
+	printNumbers(n.percent, false)
 	p.Println(`	})`)
 	p.Println(`}`)
 	p.Println()

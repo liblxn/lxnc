@@ -122,12 +122,14 @@ func (d *xmlDecoder) ReadInt(parent xml.StartElement) int {
 }
 
 func (d *xmlDecoder) ReportErr(err error, parent xml.StartElement) {
-	if d.err == nil || d.err == io.EOF {
-		if tag := parent.Name.Local; tag != "" {
-			d.err = errors.Newf("%s (<%s>): %v", d.file, tag, err)
-		} else {
-			d.err = errors.Newf("%s: %v", d.file, err)
-		}
+	if d.err != nil && d.err != io.EOF {
+		return
+	}
+
+	if tag := parent.Name.Local; tag != "" {
+		d.err = errors.Newf("%s (<%s>): %v", d.file, tag, err)
+	} else {
+		d.err = errors.Newf("%s: %v", d.file, err)
 	}
 }
 
