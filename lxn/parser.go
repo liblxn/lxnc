@@ -6,7 +6,6 @@ import (
 	"unicode"
 
 	"github.com/liblxn/lxnc/internal/errors"
-	"github.com/liblxn/lxnc/schema"
 )
 
 type parser struct {
@@ -16,12 +15,12 @@ type parser struct {
 	errs   ErrorList
 }
 
-func (p *parser) Parse(filename string, input []byte) ([]schema.Message, error) {
+func (p *parser) Parse(filename string, input []byte) ([]Message, error) {
 	p.tokens = p.t.Scan(filename, input)
 	p.errs.clear()
 	p.next() // scan initial token
 
-	var m []schema.Message
+	var m []Message
 	section := ""
 	for {
 		switch p.tok.typ {
@@ -41,14 +40,14 @@ func (p *parser) Parse(filename string, input []byte) ([]schema.Message, error) 
 	}
 }
 
-func (p *parser) parseMessage(section string) (msg schema.Message) {
+func (p *parser) parseMessage(section string) (msg Message) {
 	msg.Section = section
 	msg.Key = p.tok.val
 	p.next()
 	return p.parseMessageFragments(msg)
 }
 
-func (p *parser) parseMessageFragments(msg schema.Message) schema.Message {
+func (p *parser) parseMessageFragments(msg Message) Message {
 	defer func() {
 		// trim trailing whitespaces
 		ntext := len(msg.Text)
@@ -101,7 +100,7 @@ func (p *parser) parseText() string {
 	return txt
 }
 
-func (p *parser) parseReplacement(textPos int) (repl schema.Replacement) {
+func (p *parser) parseReplacement(textPos int) (repl Replacement) {
 	repl.TextPos = textPos
 	repl.Key = p.tok.val
 	p.next()
@@ -114,22 +113,22 @@ func (p *parser) parseReplacement(textPos int) (repl schema.Replacement) {
 
 	switch strings.ToLower(typ) {
 	case "string":
-		repl.Type = schema.StringReplacement
+		repl.Type = StringReplacement
 		repl.Details = p.parseStringDetails()
 	case "number":
-		repl.Type = schema.NumberReplacement
+		repl.Type = NumberReplacement
 		repl.Details = p.parseNumberDetails()
 	case "percent":
-		repl.Type = schema.PercentReplacement
+		repl.Type = PercentReplacement
 		repl.Details = p.parsePercentDetails()
 	case "money":
-		repl.Type = schema.MoneyReplacement
+		repl.Type = MoneyReplacement
 		repl.Details = p.parseMoneyDetails()
 	case "plural":
-		repl.Type = schema.PluralReplacement
+		repl.Type = PluralReplacement
 		repl.Details = p.parsePluralDetails()
 	case "select":
-		repl.Type = schema.SelectReplacement
+		repl.Type = SelectReplacement
 		repl.Details = p.parseSelectDetails()
 	default:
 		p.errorf("invalid replacement type: %s", typ)
@@ -140,30 +139,30 @@ func (p *parser) parseReplacement(textPos int) (repl schema.Replacement) {
 	return repl
 }
 
-func (p *parser) parseStringDetails() schema.ReplacementDetails {
+func (p *parser) parseStringDetails() ReplacementDetails {
 	p.skipReplacementOptions()
-	return schema.ReplacementDetails{}
+	return ReplacementDetails{}
 }
 
-func (p *parser) parseNumberDetails() schema.ReplacementDetails {
+func (p *parser) parseNumberDetails() ReplacementDetails {
 	p.skipReplacementOptions()
-	return schema.ReplacementDetails{}
+	return ReplacementDetails{}
 }
 
-func (p *parser) parsePercentDetails() schema.ReplacementDetails {
+func (p *parser) parsePercentDetails() ReplacementDetails {
 	p.skipReplacementOptions()
-	return schema.ReplacementDetails{}
+	return ReplacementDetails{}
 }
 
-func (p *parser) parseMoneyDetails() schema.ReplacementDetails {
-	details := schema.MoneyDetails{}
+func (p *parser) parseMoneyDetails() ReplacementDetails {
+	details := MoneyDetails{}
 
 	hasCurrency := false
 	for p.tok.typ == replacementOptionStart {
 		option := p.tok.val
 		p.next()
 
-		msg := p.parseMessageFragments(schema.Message{})
+		msg := p.parseMessageFragments(Message{})
 		switch strings.ToLower(option) {
 		case "currency":
 			switch {
@@ -188,14 +187,14 @@ func (p *parser) parseMoneyDetails() schema.ReplacementDetails {
 	if !hasCurrency {
 		p.errorf("money option .currency required")
 	}
-	return schema.ReplacementDetails{details}
+	return ReplacementDetails{details}
 }
 
-func (p *parser) parsePluralDetails() schema.ReplacementDetails {
-	details := schema.PluralDetails{
-		Type:     schema.Cardinal,
-		Variants: make(map[schema.PluralTag]schema.Message),
-		Custom:   make(map[int64]schema.Message),
+func (p *parser) parsePluralDetails() ReplacementDetails {
+	details := PluralDetails{
+		Type:     Cardinal,
+		Variants: make(map[PluralTag]Message),
+		Custom:   make(map[int64]Message),
 	}
 
 	typ := ""
@@ -211,58 +210,58 @@ func (p *parser) parsePluralDetails() schema.ReplacementDetails {
 			} else if _, has := details.Custom[n]; has {
 				p.errorf("plural option already defined: .[%s]", option)
 			}
-			details.Custom[n] = p.parseMessageFragments(schema.Message{Key: option})
+			details.Custom[n] = p.parseMessageFragments(Message{Key: option})
 		} else {
 			option = strings.ToLower(option)
-			tag := schema.PluralTag(-1)
+			tag := PluralTag(-1)
 			switch option {
 			case "cardinal", "ordinal":
 				if typ != "" && typ != option {
 					p.errorf("multiple plural types defined (%s and %s)", typ, option)
 				} else if option == "ordinal" {
-					details.Type = schema.Ordinal
+					details.Type = Ordinal
 				} else {
-					details.Type = schema.Cardinal
+					details.Type = Cardinal
 				}
 				typ = option
 			case "zero":
-				tag = schema.Zero
+				tag = Zero
 			case "one":
-				tag = schema.One
+				tag = One
 			case "two":
-				tag = schema.Two
+				tag = Two
 			case "few":
-				tag = schema.Few
+				tag = Few
 			case "many":
-				tag = schema.Many
+				tag = Many
 			case "other":
-				tag = schema.Other
+				tag = Other
 			default:
 				p.errorf("invalid plural option: .%s", option)
 			}
 
 			if tag < 0 {
-				p.parseMessageFragments(schema.Message{})
+				p.parseMessageFragments(Message{})
 			} else {
 				if details.Variants[tag].Key != "" {
 					p.errorf("plural option already defined: .%s", option)
 				}
-				details.Variants[tag] = p.parseMessageFragments(schema.Message{Key: option})
+				details.Variants[tag] = p.parseMessageFragments(Message{Key: option})
 			}
 		}
 
 		p.expect(replacementOptionEnd)
 	}
 
-	if details.Variants[schema.Other].Key == "" {
+	if details.Variants[Other].Key == "" {
 		p.errorf("plural option .other required")
 	}
-	return schema.ReplacementDetails{details}
+	return ReplacementDetails{details}
 }
 
-func (p *parser) parseSelectDetails() schema.ReplacementDetails {
-	details := schema.SelectDetails{
-		Cases: make(map[string]schema.Message),
+func (p *parser) parseSelectDetails() ReplacementDetails {
+	details := SelectDetails{
+		Cases: make(map[string]Message),
 	}
 
 	opts := make(map[string]struct{})
@@ -275,7 +274,7 @@ func (p *parser) parseSelectDetails() schema.ReplacementDetails {
 			if _, has := details.Cases[option]; has {
 				p.errorf("select option already defined: .[%s]", option)
 			}
-			details.Cases[option] = p.parseMessageFragments(schema.Message{Key: option})
+			details.Cases[option] = p.parseMessageFragments(Message{Key: option})
 		} else {
 			if _, has := opts[option]; has {
 				p.errorf("select option already defined: .%s", option)
@@ -283,7 +282,7 @@ func (p *parser) parseSelectDetails() schema.ReplacementDetails {
 			opts[option] = struct{}{}
 
 			optval := ""
-			msg := p.parseMessageFragments(schema.Message{})
+			msg := p.parseMessageFragments(Message{})
 			switch {
 			case len(msg.Replacements) != 0:
 				p.errorf("replacements not allowed in select option .%s", option)
@@ -302,13 +301,13 @@ func (p *parser) parseSelectDetails() schema.ReplacementDetails {
 	if _, hasFallback := details.Cases[details.Fallback]; details.Fallback != "" && !hasFallback {
 		p.errorf("default value %q not found in select options", details.Fallback)
 	}
-	return schema.ReplacementDetails{details}
+	return ReplacementDetails{details}
 }
 
 func (p *parser) skipReplacementOptions() {
 	for p.tok.typ == replacementOptionStart {
 		p.next() // skip option name
-		p.parseMessageFragments(schema.Message{})
+		p.parseMessageFragments(Message{})
 		p.expect(replacementOptionEnd)
 	}
 }

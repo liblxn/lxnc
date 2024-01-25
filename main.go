@@ -7,7 +7,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/liblxn/lxnc/schema"
 	msgpack "github.com/mprot/msgpack-go"
 
 	"github.com/liblxn/lxnc/internal/locale"
@@ -18,7 +17,7 @@ const targetExt = ".lxnc"
 
 type compilation struct {
 	files []string
-	cat   schema.Catalog
+	cat   lxn.Catalog
 	bin   []byte
 }
 

@@ -13,7 +13,7 @@ download-data: CLDR_DATA_URL = https://unicode.org/Public/cldr/$(CLDR_VERSION)/c
 download-data:
 	mkdir -p $(DATA_DIR)
 	rm -rf $(DATA_DIR)/*
-	curl -L -o $(DATA_DIR)/schema.mprot https://raw.githubusercontent.com/liblxn/lxn/master/schema.mprot
+	curl -L -o $(DATA_DIR)/schema.mprot https://raw.githubusercontent.com/liblxn/lxn/main/schema.mprot
 	curl -L -o $(DATA_DIR)/cldr.zip $(CLDR_DATA_URL)
 	unzip -d $(DATA_DIR)/cldr $(DATA_DIR)/cldr.zip
 	echo "$(CLDR_VERSION)" > $(DATA_DIR)/cldr/version
@@ -23,6 +23,6 @@ download-data:
 .PHONY: generate
 generate:
 	go build -o bin/generate ./cmd/generate/
-	rm -rf internal/locale/* ./schema/*
+	rm -rf internal/locale/*
 	./bin/generate -out ./internal/locale -cldr-data $(DATA_DIR)/cldr -cldr-version $(shell cat $(DATA_DIR)/cldr/version)
-	./bin/generate -out ./schema -schema $(DATA_DIR)/schema.mprot
+	./bin/generate -out ./lxn -schema $(DATA_DIR)/schema.mprot

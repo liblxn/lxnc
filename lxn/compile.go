@@ -4,7 +4,6 @@ import (
 	"os"
 
 	"github.com/liblxn/lxnc/internal/locale"
-	"github.com/liblxn/lxnc/schema"
 )
 
 type input struct {
@@ -14,33 +13,33 @@ type input struct {
 
 // CompileFiles parses the given files and determines the locale information which is need
 // for formatting data.
-func CompileFiles(loc locale.Locale, filenames ...string) (schema.Catalog, error) {
+func CompileFiles(loc locale.Locale, filenames ...string) (Catalog, error) {
 	inputs := make([]input, 0, len(filenames))
 	for _, filename := range filenames {
 		bytes, err := os.ReadFile(filename)
 		if err != nil {
-			return schema.Catalog{}, err
+			return Catalog{}, err
 		}
 		inputs = append(inputs, input{filename: filename, bytes: bytes})
 	}
 	return compile(loc, inputs)
 }
 
-func compile(loc locale.Locale, inputs []input) (schema.Catalog, error) {
+func compile(loc locale.Locale, inputs []input) (Catalog, error) {
 	var (
 		p    parser
-		msgs []schema.Message
+		msgs []Message
 	)
 	for _, input := range inputs {
 		m, err := p.Parse(input.filename, input.bytes)
 		if err != nil {
-			return schema.Catalog{}, err
+			return Catalog{}, err
 		}
 		msgs = append(msgs, m...)
 	}
 
-	return schema.Catalog{
-		Locale: schema.Locale{
+	return Catalog{
+		Locale: Locale{
 			ID:              loc.String(),
 			DecimalFormat:   newNumberFormat(locale.DecimalFormat(loc)),
 			MoneyFormat:     newNumberFormat(locale.MoneyFormat(loc)),
@@ -52,14 +51,14 @@ func compile(loc locale.Locale, inputs []input) (schema.Catalog, error) {
 	}, nil
 }
 
-func newNumberFormat(nf locale.NumberFormat) schema.NumberFormat {
+func newNumberFormat(nf locale.NumberFormat) NumberFormat {
 	symbols := nf.Symbols()
 	posAffixes := nf.PositiveAffixes()
 	negAffixes := nf.NegativeAffixes()
 	intGrouping := nf.IntegerGrouping()
 	fracGrouping := nf.FractionGrouping()
-	return schema.NumberFormat{
-		Symbols: schema.Symbols{
+	return NumberFormat{
+		Symbols: Symbols{
 			Decimal: symbols.Decimal,
 			Group:   symbols.Group,
 			Percent: symbols.Percent,
@@ -81,10 +80,10 @@ func newNumberFormat(nf locale.NumberFormat) schema.NumberFormat {
 	}
 }
 
-func newPlurals(p locale.Plural) []schema.Plural {
-	var res []schema.Plural
+func newPlurals(p locale.Plural) []Plural {
+	var res []Plural
 	for _, rules := range p.Rules() {
-		plural := schema.Plural{Tag: schema.PluralTag(rules.Tag())}
+		plural := Plural{Tag: PluralTag(rules.Tag())}
 		rules.Iter(func(r locale.PluralRule) {
 			plural.Rules = append(plural.Rules, newPluralRule(r))
 		})
@@ -92,11 +91,11 @@ func newPlurals(p locale.Plural) []schema.Plural {
 	return res
 }
 
-func newPluralRule(r locale.PluralRule) schema.PluralRule {
+func newPluralRule(r locale.PluralRule) PluralRule {
 	nranges := r.Ranges.Len()
-	ranges := make([]schema.Range, nranges)
+	ranges := make([]Range, nranges)
 	for i := 0; i < nranges; i++ {
-		ranges[i] = schema.Range(r.Ranges.At(i))
+		ranges[i] = Range(r.Ranges.At(i))
 	}
 
 	mod := 0
@@ -107,11 +106,11 @@ func newPluralRule(r locale.PluralRule) schema.PluralRule {
 		}
 	}
 
-	return schema.PluralRule{
-		Operand:    schema.Operand(r.Operand),
+	return PluralRule{
+		Operand:    Operand(r.Operand),
 		Modulo:     mod,
 		Negate:     r.Operator == locale.NotEqual,
 		Ranges:     ranges,
-		Connective: schema.Connective(r.Connective),
+		Connective: Connective(r.Connective),
 	}
 }
