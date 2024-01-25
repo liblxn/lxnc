@@ -57,7 +57,7 @@ type symbolsLookupVar struct {
 }
 
 func newSymbolsLookupVar(name string, typ *symbolsLookup, data *cldr.Data) *symbolsLookupVar {
-	multiString := newMultiStringVar("symbols", &typ.multiString)
+	multiString := newMultiStringVar(name, &typ.multiString)
 	forEachNumbers(data, allFormats, func(data numbersData) {
 		multiString.add(typ.newSymbols(data.symb))
 	})

@@ -138,6 +138,10 @@ func (v *numbersLookupVar) Generate(p *generator.Printer) {
 		numbersBytes = 2
 	case numbersBits <= 32:
 		numbersBytes = 4
+	case numbersBits <= 64:
+		numbersBytes = 8
+	default:
+		panic("invalid numbers bits")
 	}
 
 	numbers := func(patternID, symbolsID, zeroID uint) uint {

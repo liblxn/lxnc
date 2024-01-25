@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	schema "github.com/liblxn/lxn/schema/golang"
+	"github.com/liblxn/lxnc/schema"
 )
 
 func TestParser(t *testing.T) {

@@ -28,7 +28,7 @@ func main() {
 	var opts options
 	flag.StringVar(&opts.outDir, "out", "out", "path to the output directory")
 	flag.StringVar(&opts.packageName, "pkg", "", "name of the package")
-	flag.StringVar(&opts.cldrDataDir, "cldr-data", "data/cldr", "path to the directory containing the CLDR data")
+	flag.StringVar(&opts.cldrDataDir, "cldr-data", "", "path to the directory containing the CLDR data")
 	flag.StringVar(&opts.cldrVersion, "cldr-version", "", "the version of the CLDR data")
 	flag.StringVar(&opts.schemaPath, "schema", "", "the path to the schema definition file")
 	flag.Parse()
@@ -39,6 +39,9 @@ func main() {
 
 	if opts.packageName == "" {
 		opts.packageName = filepath.Base(opts.outDir)
+		if opts.packageName == "" || opts.packageName == "." {
+			fatal("invalid package name (see flag 'pkg')")
+		}
 	}
 
 	tasks := []struct {
@@ -100,18 +103,22 @@ func generateCldr(opts options) error {
 
 func generateSchema(opts options) error {
 	gen := mprot_generator.NewGolang(mprot_generator.GolangOptions{
-		ImportRoot:   ".",
+		ImportRoot:   "",
 		ScopedEnums:  false,
 		UnwrapUnions: false,
 		TypeID:       false,
 	})
 
-	return gen.Generate(mprot_generator.Options{
+	err := gen.Generate(mprot_generator.Options{
 		RootDirectory:    filepath.Dir(opts.schemaPath),
-		GlobPatterns:     []string{opts.schemaPath},
+		GlobPatterns:     []string{filepath.Base(opts.schemaPath)},
 		RemoveDeprecated: true,
 		OutputDirectory:  opts.outDir,
 	})
+	if err != nil {
+		return err
+	}
+	return gen.Dump()
 }
 
 func fatal(args ...any) {

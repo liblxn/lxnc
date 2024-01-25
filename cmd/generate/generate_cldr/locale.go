@@ -15,18 +15,18 @@ var (
 )
 
 type locale struct {
-	packageName       string
-	tags              *tagLookupVar
-	parentTags        *parentTagLookupVar
-	regionContainment *regionContainmentLookupVar
+	packageName        string
+	tags               *tagLookupVar
+	parentTags         *parentTagLookupVar
+	regionContainments *regionContainmentLookupVar
 }
 
-func newLocale(packageName string, tags *tagLookupVar, parentTags *parentTagLookupVar, regionContainment *regionContainmentLookupVar) *locale {
+func newLocale(packageName string, tags *tagLookupVar, parentTags *parentTagLookupVar, regionContainments *regionContainmentLookupVar) *locale {
 	return &locale{
-		packageName:       packageName,
-		tags:              tags,
-		parentTags:        parentTags,
-		regionContainment: regionContainment,
+		packageName:        packageName,
+		tags:               tags,
+		parentTags:         parentTags,
+		regionContainments: regionContainments,
 	}
 }
 
@@ -56,8 +56,8 @@ func (l *locale) Generate(p *generator.Printer) {
 	p.Println(`	}`)
 	p.Println()
 	p.Println(`	lang := langTags.langID(p.lang)`)
-	p.Println(`	script := scriptTags.scriptID(p.script)`)
-	p.Println(`	region := regionTags.regionID(p.region)`)
+	p.Println(`	script := `, l.tags.scripts.name, `.scriptID(p.script)`)
+	p.Println(`	region := `, l.tags.regions.name, `.regionID(p.region)`)
 	p.Println(`	switch {`)
 	p.Println(`	case lang == 0:`)
 	p.Println(`		return 0, errors.Newf("unsupported language: %s", p.lang)`)
@@ -67,17 +67,17 @@ func (l *locale) Generate(p *generator.Printer) {
 	p.Println()
 	p.Println(`	var tagID tagID`)
 	p.Println(`	if len(p.region) == 0 || region != 0 {`)
-	p.Println(`		tagID = localeTags.tagID(lang, script, region)`)
+	p.Println(`		tagID = `, l.tags.name, `.tagID(lang, script, region)`)
 	p.Println(`	}`)
 	p.Println(`	if tagID == 0 && len(p.region) != 0 {`)
 	p.Println(`		var parents [2]regionID`)
-	p.Println(`		nparents := regionContainment.containmentIDs(p.region, parents[:])`)
+	p.Println(`		nparents := `, l.regionContainments.name, `.containmentIDs(p.region, parents[:])`)
 	p.Println(`		if nparents == 0 && region == 0 {`)
 	p.Println(`			return 0, errors.Newf("unsupported region: %s", p.region)`)
 	p.Println(`		}`)
 	p.Println()
 	p.Println(`		for i := 0; i < nparents; i++ {`)
-	p.Println(`			if tagID = localeTags.tagID(lang, script, parents[i]); tagID != 0 {`)
+	p.Println(`			if tagID = `, l.tags.name, `.tagID(lang, script, parents[i]); tagID != 0 {`)
 	p.Println(`				break`)
 	p.Println(`			}`)
 	p.Println(`		}`)
@@ -330,7 +330,7 @@ func (l *locale) GenerateTest(p *generator.Printer) {
 		pids := parentIDs[tag]
 		containments := make([]_localeContainment, len(pids))
 		for i, pid := range pids {
-			children := l.regionContainment.childrenOf(pid.Territory)
+			children := l.regionContainments.childrenOf(pid.Territory)
 			// filter out existing tags
 			c := make([]string, 0, len(children))
 			for _, child := range children {

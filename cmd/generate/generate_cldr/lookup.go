@@ -313,12 +313,14 @@ func (l *multiString) generateTest(p *generator.Printer) {
 			binary.BigEndian.PutUint32(buf[:], uint32(off))
 			return fmt.Sprintf(`\x%02x\x%02x\x%02x\x%02x`, buf[0], buf[1], buf[2], buf[3])
 		}
-	default:
+	case l.offsetBits <= 32:
 		offset = func(off int) string {
 			var buf [8]byte
 			binary.BigEndian.PutUint64(buf[:], uint64(off))
 			return fmt.Sprintf(`\x%02x\x%02x\x%02x\x%02x\x%02x\x%02x\x%02x\x%02x`, buf[0], buf[1], buf[2], buf[3], buf[4], buf[5], buf[6], buf[7])
 		}
+	default:
+		panic("invalid offset bits")
 	}
 
 	newLookup := func(str ...string) string {
@@ -438,13 +440,15 @@ func (v *multiStringVar) generate(p *generator.Printer) {
 			binary.BigEndian.PutUint32(buf[:], uint32(off))
 			return encodeHex(buf[:])
 		}
-	default:
+	case v.typ.offsetBits <= 64:
 		offsetBits = 64
 		hexOffset = func(off int) string {
 			var buf [8]byte
 			binary.BigEndian.PutUint64(buf[:], uint64(off))
 			return encodeHex(buf[:])
 		}
+	default:
+		panic("invalid offset bits")
 	}
 
 	p.Println(`const `, v.name, ` `, featureLookup, ` = "" + // `, len(v.strings), ` items, `, int(v.typ.offsetBits/8)+v.bytes, ` bytes`)
@@ -639,7 +643,7 @@ func (v *stringBlockVar) add(str string) {
 
 	switch {
 	case len(v.strings) == (1<<v.typ.idBits)-1:
-		panic(fmt.Sprintf("number of %s strings exceeds the maximum, cannot add %s", v.typ.feature, str))
+		panic(fmt.Sprintf("number of %s strings exceeds the maximum (%d), cannot add %s", v.typ.feature, (1<<v.typ.idBits)-1, str))
 	case len(str) > v.typ.blocksize:
 		panic(fmt.Sprintf("%s string length exceeds the limit of %d: %s", v.typ.feature, v.typ.blocksize, str))
 	}

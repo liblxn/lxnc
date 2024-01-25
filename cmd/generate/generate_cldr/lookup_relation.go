@@ -53,6 +53,20 @@ func (l *relationLookup) Generate(p *generator.Printer) {
 		panic("invalid plural rule lookup configuration")
 	}
 
+	var relIDBits int
+	switch {
+	case l.idBits <= 8:
+		relIDBits = 8
+	case l.idBits <= 16:
+		relIDBits = 16
+	case l.idBits <= 32:
+		relIDBits = 32
+	case l.idBits <= 64:
+		relIDBits = 64
+	default:
+		panic("invalid relation id bits")
+	}
+
 	operandMask := fmt.Sprintf("%#x", (1<<l.operation.operandBits)-1)
 	modexpMask := fmt.Sprintf("%#x", (1<<l.modexpBits)-1)
 	operatorMask := fmt.Sprintf("%#x", (1<<l.operation.operatorBits)-1)
@@ -69,7 +83,7 @@ func (l *relationLookup) Generate(p *generator.Printer) {
 	p.Println(`func (r relation) ranges() relation { return r[1 : 1+2*r.rangeCount()] }`)
 	p.Println(`func (r relation) next() relation   { return r[1+2*r.rangeCount():] }`)
 	p.Println()
-	p.Println(`type relationID uint`, l.idBits)
+	p.Println(`type relationID uint`, relIDBits)
 	p.Println(`type relationLookup []uint`, l.pluralChunkBits)
 	p.Println()
 	p.Println(`func (l relationLookup) relation(id relationID) relation {`)

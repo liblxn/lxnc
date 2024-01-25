@@ -2,7 +2,6 @@ package cldr
 
 import (
 	"encoding/xml"
-	"fmt"
 	"reflect"
 	"strings"
 	"testing"
@@ -384,7 +383,6 @@ func TestPluralRuleParser(t *testing.T) {
 		case err != nil:
 			t.Errorf("unexpected error: %v", err)
 		case !reflect.DeepEqual(rule, c.expected):
-			fmt.Println(">>>", c.expected.String())
 			t.Errorf("unexpected plural rule: %s", rule.String())
 		}
 	}

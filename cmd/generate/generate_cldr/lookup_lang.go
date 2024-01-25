@@ -18,7 +18,7 @@ func newLangLookup() *langLookup {
 	return &langLookup{
 		stringBlock: stringBlock{
 			feature:   "lang",
-			idBits:    8,
+			idBits:    16,
 			blocksize: 3,
 		},
 	}

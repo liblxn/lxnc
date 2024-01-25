@@ -1,11 +1,10 @@
 package lxn
 
 import (
-	"io/ioutil"
-
-	schema "github.com/liblxn/lxn/schema/golang"
+	"os"
 
 	"github.com/liblxn/lxnc/internal/locale"
+	"github.com/liblxn/lxnc/schema"
 )
 
 type input struct {
@@ -13,22 +12,12 @@ type input struct {
 	bytes    []byte
 }
 
-// Compile parses the given input and determines the locale information which is need
+// CompileFiles parses the given files and determines the locale information which is need
 // for formatting data.
-func Compile(loc locale.Locale, data ...[]byte) (schema.Catalog, error) {
-	inputs := make([]input, 0, len(data))
-	for _, bytes := range data {
-		inputs = append(inputs, input{bytes: bytes})
-	}
-	return compile(loc, inputs)
-}
-
-// CompileFile parses the given file and determines the locale information which is need
-// for formatting data.
-func CompileFile(loc locale.Locale, filenames ...string) (schema.Catalog, error) {
+func CompileFiles(loc locale.Locale, filenames ...string) (schema.Catalog, error) {
 	inputs := make([]input, 0, len(filenames))
 	for _, filename := range filenames {
-		bytes, err := ioutil.ReadFile(filename)
+		bytes, err := os.ReadFile(filename)
 		if err != nil {
 			return schema.Catalog{}, err
 		}
@@ -39,15 +28,15 @@ func CompileFile(loc locale.Locale, filenames ...string) (schema.Catalog, error)
 
 func compile(loc locale.Locale, inputs []input) (schema.Catalog, error) {
 	var (
-		p   parser
-		msg []schema.Message
+		p    parser
+		msgs []schema.Message
 	)
 	for _, input := range inputs {
 		m, err := p.Parse(input.filename, input.bytes)
 		if err != nil {
 			return schema.Catalog{}, err
 		}
-		msg = append(msg, m...)
+		msgs = append(msgs, m...)
 	}
 
 	return schema.Catalog{
@@ -59,7 +48,7 @@ func compile(loc locale.Locale, inputs []input) (schema.Catalog, error) {
 			CardinalPlurals: newPlurals(locale.CardinalPlural(loc)),
 			OrdinalPlurals:  newPlurals(locale.OrdinalPlural(loc)),
 		},
-		Messages: msg,
+		Messages: msgs,
 	}, nil
 }
 
@@ -94,11 +83,10 @@ func newNumberFormat(nf locale.NumberFormat) schema.NumberFormat {
 
 func newPlurals(p locale.Plural) []schema.Plural {
 	var res []schema.Plural
-	for i := 0; i < len(p) && p[i].Tag != locale.Other; i++ {
-		rules := schema.Plural{Tag: schema.PluralTag(p[i].Tag)}
-		p[i].Iter(func(r locale.PluralRule) bool {
-			rules.Rules = append(rules.Rules, newPluralRule(r))
-			return true
+	for _, rules := range p.Rules() {
+		plural := schema.Plural{Tag: schema.PluralTag(rules.Tag())}
+		rules.Iter(func(r locale.PluralRule) {
+			plural.Rules = append(plural.Rules, newPluralRule(r))
 		})
 	}
 	return res

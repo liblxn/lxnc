@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	schema "github.com/liblxn/lxn/schema/golang"
+	"github.com/liblxn/lxnc/schema"
 	msgpack "github.com/mprot/msgpack-go"
 
 	"github.com/liblxn/lxnc/internal/locale"
@@ -74,7 +74,7 @@ func main() {
 
 func compile(loc locale.Locale, filenames []string) (c compilation, err error) {
 	c.files = filenames
-	c.cat, err = lxn.CompileFile(loc, filenames...)
+	c.cat, err = lxn.CompileFiles(loc, filenames...)
 	if err != nil {
 		return c, err
 	}
@@ -85,42 +85,16 @@ func compile(loc locale.Locale, filenames []string) (c compilation, err error) {
 	}
 	c.bin = buf.Bytes()
 
-	check(c)
+	lxn.Validate(c.cat, lxn.Validator{
+		Warn: func(msg string) {
+			fmt.Fprintln(os.Stderr, "warning:", msg)
+		},
+	})
 	return c, nil
 }
 
-func check(c compilation) {
-	messageKeys := make(map[string]map[string]struct{}) // section => key set
-	warnedDuplicates := make(map[string]struct{})       // (section, message key) set
-	for _, msg := range c.cat.Messages {
-		keys, has := messageKeys[msg.Section]
-		if !has {
-			keys = make(map[string]struct{})
-			messageKeys[msg.Section] = keys
-		}
-
-		if _, has = keys[msg.Key]; has {
-			s := msg.Section + "." + msg.Key
-			if _, warned := warnedDuplicates[s]; !warned {
-				if msg.Section == "" {
-					warnf("duplicate message key %q", msg.Key)
-				} else {
-					warnf("duplicate message key %q for section %q", msg.Key, msg.Section)
-				}
-				warnedDuplicates[s] = struct{}{}
-			}
-		}
-		keys[msg.Key] = struct{}{}
-	}
-}
-
-func fatalf(msg string, args ...interface{}) {
+func fatalf(msg string, args ...any) {
 	fmt.Fprintf(os.Stderr, msg, args...)
 	fmt.Fprintln(os.Stderr)
 	os.Exit(1)
-}
-
-func warnf(msg string, args ...interface{}) {
-	fmt.Fprintf(os.Stderr, "warning: "+msg, args...)
-	fmt.Fprintln(os.Stderr)
 }

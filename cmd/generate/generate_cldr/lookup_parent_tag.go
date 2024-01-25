@@ -138,8 +138,10 @@ func (v *parentTagLookupVar) Generate(p *generator.Printer) {
 		bits = 16
 	case bits <= 32:
 		bits = 32
-	default:
+	case bits <= 64:
 		bits = 64
+	default:
+		panic("invalid parent tag id bits")
 	}
 
 	digitsPerElem := bits / 4

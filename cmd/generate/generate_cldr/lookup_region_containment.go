@@ -191,12 +191,14 @@ func (v *regionContainmentLookupVar) Generate(p *generator.Printer) {
 			binary.BigEndian.PutUint32(buf[:], uint32(id))
 			return string(buf[:])
 		}
-	default:
+	case v.regions.typ.idBits <= 64:
 		regionID = func(id uint) string {
 			var buf [8]byte
 			binary.BigEndian.PutUint64(buf[:], uint64(id))
 			return string(buf[:])
 		}
+	default:
+		panic("invalid region id bits")
 	}
 
 	var buf bytes.Buffer

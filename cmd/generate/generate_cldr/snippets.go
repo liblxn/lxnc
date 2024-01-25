@@ -32,7 +32,7 @@ func FileSnippets(packageName string, data *cldr.Data) map[string]generator.Snip
 
 	affixLookupVar := newAffixLookupVar("affixes", affixLookup, data)
 	patternLookupVar := newPatternLookupVar("patterns", patternLookup, affixLookupVar, data)
-	symbolsLookupVar := newSymbolsLookupVar("symbols", symbolsLookup, data)
+	symbolsLookupVar := newSymbolsLookupVar("numberSymbols", symbolsLookup, data)
 	zeroLookupVar := newZeroLookupVar("zeros", zeroLookup, data)
 	decimalNumbersLookupVar := newNumbersLookupVar("decimalNumbers", numbersLookup, tagLookupVar, patternLookupVar, symbolsLookupVar, zeroLookupVar, data, decimalNumbers)
 	moneyNumbersLookupVar := newNumbersLookupVar("moneyNumbers", numbersLookup, tagLookupVar, patternLookupVar, symbolsLookupVar, zeroLookupVar, data, currencyNumbers)

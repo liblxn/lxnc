@@ -100,5 +100,5 @@ type testSnippetAsSnippet struct {
 	TestSnippet
 }
 
-func (t testSnippetAsSnippet) Imports() []string   { return t.TestImports() }
+func (t testSnippetAsSnippet) Imports() []string   { return append(t.TestImports(), "testing") }
 func (t testSnippetAsSnippet) Generate(p *Printer) { t.GenerateTest(p) }

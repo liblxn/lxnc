@@ -42,8 +42,10 @@ func (l *pluralRuleLookup) Generate(p *generator.Printer) {
 		ruleBits = 16
 	case ruleBits <= 32:
 		ruleBits = 32
-	default:
+	case ruleBits <= 64:
 		ruleBits = 64
+	default:
+		panic("invalid plural rule bits")
 	}
 
 	tagMask := fmt.Sprintf("%#x", (1<<l.tagBits)-1)
@@ -146,7 +148,7 @@ func (v *pluralRuleLookupVar) Generate(p *generator.Printer) {
 	case pluralRuleBits <= 64:
 		pluralRuleBits = 64
 	default:
-		panic("invalud plural rule bits")
+		panic("invalid plural rule bits")
 	}
 
 	pluralTags := map[string]uint{

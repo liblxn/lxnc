@@ -5,8 +5,8 @@ import (
 	"strings"
 	"unicode"
 
-	schema "github.com/liblxn/lxn/schema/golang"
 	"github.com/liblxn/lxnc/internal/errors"
+	"github.com/liblxn/lxnc/schema"
 )
 
 type parser struct {

@@ -174,6 +174,7 @@ func newPatternLookupVar(name string, typ *patternLookup, affixes *affixLookupVa
 
 		if _, has := patternMap[data.nf.Pattern]; !has {
 			nfs = append(nfs, data.nf)
+			patternMap[data.nf.Pattern] = struct{}{}
 		}
 	})
 
