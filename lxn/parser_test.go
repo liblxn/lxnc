@@ -9,6 +9,9 @@ import (
 
 func TestParser(t *testing.T) {
 	const input = `
+key-zero-single-line: message for key zero on a single line
+key-zero-multi-line: message for key zero
+	on multiple lines
 key-one:
 	message for key one
 key-two:
@@ -71,6 +74,16 @@ key-ten:
 	`
 
 	expected := []schema.Message{
+		{
+			Section: "",
+			Key:     "key-zero-single-line",
+			Text:    []string{"message for key zero on a single line"},
+		},
+		{
+			Section: "",
+			Key:     "key-zero-multi-line",
+			Text:    []string{"message for key zero on multiple lines"},
+		},
 		{
 			Section: "",
 			Key:     "key-one",

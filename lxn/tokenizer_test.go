@@ -47,6 +47,13 @@ func TestTokenizer(t *testing.T) {
 			},
 		},
 		{
+			input: "message-key:   message-text",
+			tokens: []token{
+				newToken(messageKey, "message-key"),
+				newToken(messageText, "message-text"),
+			},
+		},
+		{
 			input: "message-key:\n\tmessage-text",
 			tokens: []token{
 				newToken(messageKey, "message-key"),
@@ -304,10 +311,6 @@ func TestTokenizerWithErrors(t *testing.T) {
 		{
 			input:  "message-key",
 			errmsg: "unexpected eof (':' expected)",
-		},
-		{
-			input:  "message-key: foo",
-			errmsg: "newline expected after message key",
 		},
 		{
 			input:  "message-key:\n\t${foo.[opt{}}",

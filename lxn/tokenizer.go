@@ -123,19 +123,17 @@ func (t *tokenizer) scanMessage() {
 	t.scanIdent(messageKey)
 	t.expect(':')
 	t.skipNbSpaces()
-	if t.ch != runeEOF && t.skipNewlines() == 0 {
-		t.errorf("newline expected after message key")
-		t.nextLine()
-	}
+	t.skipNewlines()
 
 	if t.skipNbSpaces() != 0 {
+		// We are here only when there was a newline.
 		for t.skipNewlines() != 0 {
 			if t.skipNbSpaces() == 0 {
 				return
 			}
 		}
-		t.scanMessageBlock()
 	}
+	t.scanMessageBlock()
 }
 
 func (t *tokenizer) scanMessageBlock() {
@@ -266,7 +264,7 @@ func (t *tokenizer) skipNewlines() int {
 			}
 			t.next() // skip '\r'
 		}
-		t.next()
+		t.next() // skip '\n'
 		n++
 	}
 	return n
