@@ -73,7 +73,7 @@ func main() {
 
 func compile(loc locale.Locale, filenames []string) (c compilation, err error) {
 	c.files = filenames
-	c.cat, err = lxn.CompileFiles(loc, filenames...)
+	c.cat, err = lxn.CompileCatalog(loc, filenames...)
 	if err != nil {
 		return c, err
 	}

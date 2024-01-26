@@ -6,89 +6,36 @@ import (
 	"github.com/liblxn/lxnc/locale"
 )
 
-type input struct {
-	filename string
-	bytes    []byte
-}
-
-// CompileFiles parses the given files and determines the locale information which is need
-// for formatting data.
-func CompileFiles(loc locale.Locale, filenames ...string) (Catalog, error) {
-	inputs := make([]input, 0, len(filenames))
+// CompileMessages parses the given files and returns all messages found in
+// these files.
+func CompileMessages(filenames ...string) ([]Message, error) {
+	p := parser{}
+	msgs := make([]Message, 0, 128)
 	for _, filename := range filenames {
 		bytes, err := os.ReadFile(filename)
 		if err != nil {
-			return Catalog{}, err
+			return nil, err
 		}
-		inputs = append(inputs, input{filename: filename, bytes: bytes})
-	}
-	return compile(loc, inputs)
-}
 
-func compile(loc locale.Locale, inputs []input) (Catalog, error) {
-	var (
-		p    parser
-		msgs []Message
-	)
-	for _, input := range inputs {
-		m, err := p.Parse(input.filename, input.bytes)
+		m, err := p.Parse(filename, bytes)
 		if err != nil {
-			return Catalog{}, err
+			return nil, err
 		}
+
 		msgs = append(msgs, m...)
 	}
 
-	return Catalog{
-		Locale: Locale{
-			ID:              loc.String(),
-			DecimalFormat:   newNumberFormat(locale.DecimalFormat(loc)),
-			MoneyFormat:     newNumberFormat(locale.MoneyFormat(loc)),
-			PercentFormat:   newNumberFormat(locale.PercentFormat(loc)),
-			CardinalPlurals: newPlurals(locale.CardinalPlural(loc)),
-			OrdinalPlurals:  newPlurals(locale.OrdinalPlural(loc)),
-		},
-		Messages: msgs,
-	}, nil
+	return msgs, nil
 }
 
-func newNumberFormat(nf locale.NumberFormat) NumberFormat {
-	symbols := nf.Symbols()
-	posAffixes := nf.PositiveAffixes()
-	negAffixes := nf.NegativeAffixes()
-	intGrouping := nf.IntegerGrouping()
-	fracGrouping := nf.FractionGrouping()
-	return NumberFormat{
-		Symbols: Symbols{
-			Decimal: symbols.Decimal,
-			Group:   symbols.Group,
-			Percent: symbols.Percent,
-			Minus:   symbols.Minus,
-			Inf:     symbols.Inf,
-			Nan:     symbols.NaN,
-			Zero:    uint32(symbols.Zero),
-		},
-		PositivePrefix:           posAffixes.Prefix,
-		PositiveSuffix:           posAffixes.Suffix,
-		NegativePrefix:           negAffixes.Prefix,
-		NegativeSuffix:           negAffixes.Suffix,
-		MinIntegerDigits:         nf.MinIntegerDigits(),
-		MinFractionDigits:        nf.MinFractionDigits(),
-		MaxFractionDigits:        nf.MaxFractionDigits(),
-		PrimaryIntegerGrouping:   intGrouping.Primary,
-		SecondaryIntegerGrouping: intGrouping.Secondary,
-		FractionGrouping:         fracGrouping.Primary,
+// CompileCatalog parses the given files and determines the locale information which is need
+// for formatting data. It returns the catalog for all the messages in the files.
+func CompileCatalog(loc locale.Locale, filenames ...string) (Catalog, error) {
+	messages, err := CompileMessages(filenames...)
+	if err != nil {
+		return Catalog{}, err
 	}
-}
-
-func newPlurals(p locale.Plural) []Plural {
-	var res []Plural
-	for _, rules := range p.Rules() {
-		plural := Plural{Tag: PluralTag(rules.Tag())}
-		rules.Iter(func(r locale.PluralRule) {
-			plural.Rules = append(plural.Rules, newPluralRule(r))
-		})
-	}
-	return res
+	return NewCatalog(loc, messages), nil
 }
 
 func newPluralRule(r locale.PluralRule) PluralRule {
