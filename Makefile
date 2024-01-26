@@ -23,6 +23,6 @@ download-data:
 .PHONY: generate
 generate:
 	go build -o bin/generate ./cmd/generate/
-	rm -rf internal/locale/*
-	./bin/generate -out ./internal/locale -cldr-data $(DATA_DIR)/cldr -cldr-version $(shell cat $(DATA_DIR)/cldr/version)
+	rm -rf locale/*
+	./bin/generate -out ./locale -cldr-data $(DATA_DIR)/cldr -cldr-version $(shell cat $(DATA_DIR)/cldr/version)
 	./bin/generate -out ./lxn -schema $(DATA_DIR)/schema.mprot

@@ -3,7 +3,7 @@ package lxn
 import (
 	"os"
 
-	"github.com/liblxn/lxnc/internal/locale"
+	"github.com/liblxn/lxnc/locale"
 )
 
 type input struct {

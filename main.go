@@ -9,7 +9,7 @@ import (
 
 	msgpack "github.com/mprot/msgpack-go"
 
-	"github.com/liblxn/lxnc/internal/locale"
+	"github.com/liblxn/lxnc/locale"
 	"github.com/liblxn/lxnc/lxn"
 )
 
