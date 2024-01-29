@@ -141,17 +141,17 @@ func (p *parser) parseReplacement(textPos int) (repl Replacement) {
 
 func (p *parser) parseStringDetails() ReplacementDetails {
 	p.skipReplacementOptions()
-	return ReplacementDetails{}
+	return ReplacementDetails{Value: EmptyDetails{}}
 }
 
 func (p *parser) parseNumberDetails() ReplacementDetails {
 	p.skipReplacementOptions()
-	return ReplacementDetails{}
+	return ReplacementDetails{Value: EmptyDetails{}}
 }
 
 func (p *parser) parsePercentDetails() ReplacementDetails {
 	p.skipReplacementOptions()
-	return ReplacementDetails{}
+	return ReplacementDetails{Value: EmptyDetails{}}
 }
 
 func (p *parser) parseMoneyDetails() ReplacementDetails {
@@ -187,7 +187,7 @@ func (p *parser) parseMoneyDetails() ReplacementDetails {
 	if !hasCurrency {
 		p.errorf("money option .currency required")
 	}
-	return ReplacementDetails{details}
+	return ReplacementDetails{Value: details}
 }
 
 func (p *parser) parsePluralDetails() ReplacementDetails {
@@ -256,7 +256,7 @@ func (p *parser) parsePluralDetails() ReplacementDetails {
 	if details.Variants[Other].Key == "" {
 		p.errorf("plural option .other required")
 	}
-	return ReplacementDetails{details}
+	return ReplacementDetails{Value: details}
 }
 
 func (p *parser) parseSelectDetails() ReplacementDetails {
@@ -301,7 +301,7 @@ func (p *parser) parseSelectDetails() ReplacementDetails {
 	if _, hasFallback := details.Cases[details.Fallback]; details.Fallback != "" && !hasFallback {
 		p.errorf("default value %q not found in select options", details.Fallback)
 	}
-	return ReplacementDetails{details}
+	return ReplacementDetails{Value: details}
 }
 
 func (p *parser) skipReplacementOptions() {

@@ -71,6 +71,8 @@ key-ten:
 	line 5.1 ${param4} line 5.2
 	`
 
+	emptyReplacementDetails := ReplacementDetails{Value: EmptyDetails{}}
+
 	expected := []Message{
 		{
 			Section: "",
@@ -96,6 +98,7 @@ key-ten:
 					Key:     "param",
 					TextPos: 1,
 					Type:    StringReplacement,
+					Details: emptyReplacementDetails,
 				},
 			},
 		},
@@ -113,6 +116,7 @@ key-ten:
 					Key:     "param",
 					TextPos: 1,
 					Type:    NumberReplacement,
+					Details: emptyReplacementDetails,
 				},
 			},
 		},
@@ -125,6 +129,7 @@ key-ten:
 					Key:     "param",
 					TextPos: 1,
 					Type:    PercentReplacement,
+					Details: emptyReplacementDetails,
 				},
 			},
 		},
@@ -137,9 +142,11 @@ key-ten:
 					Key:     "param",
 					TextPos: 1,
 					Type:    MoneyReplacement,
-					Details: ReplacementDetails{MoneyDetails{
-						Currency: "curr",
-					}},
+					Details: ReplacementDetails{
+						Value: MoneyDetails{
+							Currency: "curr",
+						},
+					},
 				},
 			},
 		},
@@ -152,16 +159,18 @@ key-ten:
 					Key:     "count",
 					TextPos: 1,
 					Type:    PluralReplacement,
-					Details: ReplacementDetails{PluralDetails{
-						Variants: map[PluralCategory]Message{
-							Zero:  Message{Key: "zero", Text: []string{"foo"}},
-							One:   Message{Key: "one", Text: []string{"bar"}},
-							Other: Message{Key: "other", Text: []string{"foobar"}},
+					Details: ReplacementDetails{
+						Value: PluralDetails{
+							Variants: map[PluralCategory]Message{
+								Zero:  {Key: "zero", Text: []string{"foo"}},
+								One:   {Key: "one", Text: []string{"bar"}},
+								Other: {Key: "other", Text: []string{"foobar"}},
+							},
+							Custom: map[int64]Message{
+								7: {Key: "7", Text: []string{"seven"}},
+							},
 						},
-						Custom: map[int64]Message{
-							7: Message{Key: "7", Text: []string{"seven"}},
-						},
-					}},
+					},
 				},
 			},
 		},
@@ -174,17 +183,19 @@ key-ten:
 					Key:     "count",
 					TextPos: 1,
 					Type:    PluralReplacement,
-					Details: ReplacementDetails{PluralDetails{
-						Type: Ordinal,
-						Variants: map[PluralCategory]Message{
-							Two:   Message{Key: "two", Text: []string{"foo"}},
-							Few:   Message{Key: "few", Text: []string{"bar"}},
-							Other: Message{Key: "other", Text: []string{"foobar"}},
+					Details: ReplacementDetails{
+						Value: PluralDetails{
+							Type: Ordinal,
+							Variants: map[PluralCategory]Message{
+								Two:   {Key: "two", Text: []string{"foo"}},
+								Few:   {Key: "few", Text: []string{"bar"}},
+								Other: {Key: "other", Text: []string{"foobar"}},
+							},
+							Custom: map[int64]Message{
+								7: {Key: "7", Text: []string{"seven"}},
+							},
 						},
-						Custom: map[int64]Message{
-							7: Message{Key: "7", Text: []string{"seven"}},
-						},
-					}},
+					},
 				},
 			},
 		},
@@ -198,14 +209,16 @@ key-ten:
 					Key:     "gender",
 					TextPos: 0,
 					Type:    SelectReplacement,
-					Details: ReplacementDetails{SelectDetails{
-						Cases: map[string]Message{
-							"male":   Message{Key: "male", Text: []string{"he"}},
-							"female": Message{Key: "female", Text: []string{"she"}},
-							"other":  Message{Key: "other", Text: []string{"they"}},
+					Details: ReplacementDetails{
+						Value: SelectDetails{
+							Cases: map[string]Message{
+								"male":   {Key: "male", Text: []string{"he"}},
+								"female": {Key: "female", Text: []string{"she"}},
+								"other":  {Key: "other", Text: []string{"they"}},
+							},
+							Fallback: "other",
 						},
-						Fallback: "other",
-					}},
+					},
 				},
 			},
 		},
@@ -214,10 +227,10 @@ key-ten:
 			Key:     "key-ten",
 			Text:    []string{"line 1 ", " ", " line 3 line 4 ", " line 5.1 ", " line 5.2"},
 			Replacements: []Replacement{
-				{Key: "param1", TextPos: 1, Type: StringReplacement},
-				{Key: "param2", TextPos: 2, Type: StringReplacement},
-				{Key: "param3", TextPos: 3, Type: StringReplacement},
-				{Key: "param4", TextPos: 4, Type: StringReplacement},
+				{Key: "param1", TextPos: 1, Type: StringReplacement, Details: emptyReplacementDetails},
+				{Key: "param2", TextPos: 2, Type: StringReplacement, Details: emptyReplacementDetails},
+				{Key: "param3", TextPos: 3, Type: StringReplacement, Details: emptyReplacementDetails},
+				{Key: "param4", TextPos: 4, Type: StringReplacement, Details: emptyReplacementDetails},
 			},
 		},
 	}
