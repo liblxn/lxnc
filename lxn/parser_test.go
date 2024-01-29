@@ -153,7 +153,7 @@ key-ten:
 					TextPos: 1,
 					Type:    PluralReplacement,
 					Details: ReplacementDetails{PluralDetails{
-						Variants: map[PluralTag]Message{
+						Variants: map[PluralCategory]Message{
 							Zero:  Message{Key: "zero", Text: []string{"foo"}},
 							One:   Message{Key: "one", Text: []string{"bar"}},
 							Other: Message{Key: "other", Text: []string{"foobar"}},
@@ -176,7 +176,7 @@ key-ten:
 					Type:    PluralReplacement,
 					Details: ReplacementDetails{PluralDetails{
 						Type: Ordinal,
-						Variants: map[PluralTag]Message{
+						Variants: map[PluralCategory]Message{
 							Two:   Message{Key: "two", Text: []string{"foo"}},
 							Few:   Message{Key: "few", Text: []string{"bar"}},
 							Other: Message{Key: "other", Text: []string{"foobar"}},

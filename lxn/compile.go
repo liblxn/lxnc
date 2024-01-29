@@ -30,34 +30,10 @@ func CompileMessages(filenames ...string) ([]Message, error) {
 
 // CompileCatalog parses the given files and determines the locale information which is need
 // for formatting data. It returns the catalog for all the messages in the files.
-func CompileCatalog(loc locale.Locale, filenames ...string) (Catalog, error) {
+func CompileCatalog(loc locale.Locale, filenames ...string) (*Catalog, error) {
 	messages, err := CompileMessages(filenames...)
 	if err != nil {
-		return Catalog{}, err
+		return nil, err
 	}
 	return NewCatalog(loc, messages), nil
-}
-
-func newPluralRule(r locale.PluralRule) PluralRule {
-	nranges := r.Ranges.Len()
-	ranges := make([]Range, nranges)
-	for i := 0; i < nranges; i++ {
-		ranges[i] = Range(r.Ranges.At(i))
-	}
-
-	mod := 0
-	if r.ModuloExp > 0 {
-		mod = 10
-		for i := 1; i < r.ModuloExp; i++ {
-			mod *= 10
-		}
-	}
-
-	return PluralRule{
-		Operand:    Operand(r.Operand),
-		Modulo:     mod,
-		Negate:     r.Operator == locale.NotEqual,
-		Ranges:     ranges,
-		Connective: Connective(r.Connective),
-	}
 }

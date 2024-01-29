@@ -193,7 +193,7 @@ func (p *parser) parseMoneyDetails() ReplacementDetails {
 func (p *parser) parsePluralDetails() ReplacementDetails {
 	details := PluralDetails{
 		Type:     Cardinal,
-		Variants: make(map[PluralTag]Message),
+		Variants: make(map[PluralCategory]Message),
 		Custom:   make(map[int64]Message),
 	}
 
@@ -213,7 +213,7 @@ func (p *parser) parsePluralDetails() ReplacementDetails {
 			details.Custom[n] = p.parseMessageFragments(Message{Key: option})
 		} else {
 			option = strings.ToLower(option)
-			tag := PluralTag(-1)
+			tag := PluralCategory(-1)
 			switch option {
 			case "cardinal", "ordinal":
 				if typ != "" && typ != option {

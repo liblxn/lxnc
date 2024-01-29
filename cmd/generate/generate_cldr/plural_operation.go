@@ -1,6 +1,9 @@
 package generate_cldr
 
-import "github.com/liblxn/lxnc/internal/generator"
+import (
+	"github.com/liblxn/lxnc/internal/generator"
+	"github.com/liblxn/lxnc/lxn"
+)
 
 var (
 	_ generator.Snippet = (*pluralOperation)(nil)
@@ -22,20 +25,36 @@ type pluralOperation struct {
 }
 
 func newPluralOperation() *pluralOperation {
-	return &pluralOperation{
+	o := &pluralOperation{
 		operatorBits: 1,
 		eq:           0x0,
 		neq:          0x1,
 
 		operandBits:        4,
-		absValue:           0x0,
-		intDigits:          0x1,
-		numFracDigit:       0x2,
-		numFracDigitNoZero: 0x3,
-		fracDigits:         0x4,
-		fracDigitsNoZero:   0x5,
-		compactDecExp:      0x6,
+		absValue:           uint8(lxn.AbsoluteValue),
+		intDigits:          uint8(lxn.IntegerDigits),
+		numFracDigit:       uint8(lxn.NumFracDigits),
+		numFracDigitNoZero: uint8(lxn.NumFracDigitsNoZeros),
+		fracDigits:         uint8(lxn.FracDigits),
+		fracDigitsNoZero:   uint8(lxn.FracDigitsNoZeros),
+		compactDecExp:      uint8(lxn.CompactDecExponent),
 	}
+
+	maxOperator := uint8(1<<o.operatorBits) - 1
+	for _, v := range []uint8{o.eq, o.neq} {
+		if v > maxOperator {
+			panic("plural operator out of range")
+		}
+	}
+
+	maxOperand := uint8(1<<o.operandBits) - 1
+	for _, v := range []uint8{o.absValue, o.intDigits, o.numFracDigit, o.numFracDigitNoZero, o.fracDigits, o.fracDigitsNoZero, o.compactDecExp} {
+		if v > maxOperand {
+			panic("plural operand out of range")
+		}
+	}
+
+	return o
 }
 
 func (po *pluralOperation) Imports() []string {

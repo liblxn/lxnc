@@ -205,6 +205,7 @@ func newRelationLookupVar(name string, typ *relationLookup, operation *pluralOpe
 		}
 
 		v.rules = append(v.rules, relationRule{key: key, condition: rule.Condition, numChunks: numChunks})
+		keyMap[key] = struct{}{}
 	})
 
 	if totalChunks >= (1 << v.typ.idBits) {

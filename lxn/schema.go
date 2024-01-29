@@ -382,36 +382,38 @@ func (o *NumberFormat) DecodeMsgpack(r *msgpack.Reader) error {
 	return nil
 }
 
-// PluralTag is an enumeration of supported plural types. Each plural tag
+// PluralCategory is an enumeration of supported plural types. Each plural category
 // can have its own translation text.
-type PluralTag int
+type PluralCategory int
 
-// Enumerators for PluralTag.
+// Enumerators for PluralCategory.
 const (
-	Zero  PluralTag = 0
-	One   PluralTag = 1
-	Two   PluralTag = 2
-	Few   PluralTag = 3
-	Many  PluralTag = 4
-	Other PluralTag = 5
+	Zero  PluralCategory = 0
+	One   PluralCategory = 1
+	Two   PluralCategory = 2
+	Few   PluralCategory = 3
+	Many  PluralCategory = 4
+	Other PluralCategory = 5
 )
 
-// EncodeMsgpack implements the Encoder interface for PluralTag.
-func (o PluralTag) EncodeMsgpack(w *msgpack.Writer) error {
+// EncodeMsgpack implements the Encoder interface for PluralCategory.
+func (o PluralCategory) EncodeMsgpack(w *msgpack.Writer) error {
 	return w.WriteInt(int(o))
 }
 
-// DecodeMsgpack implements the Decoder interface for PluralTag.
-func (o *PluralTag) DecodeMsgpack(r *msgpack.Reader) error {
+// DecodeMsgpack implements the Decoder interface for PluralCategory.
+func (o *PluralCategory) DecodeMsgpack(r *msgpack.Reader) error {
 	val, err := r.ReadInt()
 	if err != nil {
 		return err
 	}
-	*o = PluralTag(val)
+	*o = PluralCategory(val)
 	return nil
 }
 
 // Operand represents an operand in a plural rule.
+//
+// https://unicode.org/reports/tr35/tr35-numbers.html#Operands
 type Operand int
 
 // Enumerators for Operand.
@@ -422,6 +424,7 @@ const (
 	NumFracDigitsNoZeros Operand = 3
 	FracDigits           Operand = 4
 	FracDigitsNoZeros    Operand = 5
+	CompactDecExponent   Operand = 6
 )
 
 // EncodeMsgpack implements the Encoder interface for Operand.
@@ -642,11 +645,11 @@ func (o *PluralRule) DecodeMsgpack(r *msgpack.Reader) error {
 }
 
 // Plural represents a single plural form. It holds a collection of plural rules
-// for a specific plural tag where all rules are connected with each other (see
+// for a specific plural category where all rules are connected with each other (see
 // Rule and Connective).
 type Plural struct {
-	Tag   PluralTag
-	Rules []PluralRule
+	Category PluralCategory
+	Rules    []PluralRule
 }
 
 // EncodeMsgpack implements the Encoder interface for Plural.
@@ -654,11 +657,11 @@ func (o Plural) EncodeMsgpack(w *msgpack.Writer) (err error) {
 	if err = w.WriteMapHeader(2); err != nil {
 		return err
 	}
-	// Tag
+	// Category
 	if err = w.WriteInt64(1); err != nil {
 		return err
 	}
-	if err = o.Tag.EncodeMsgpack(w); err != nil {
+	if err = o.Category.EncodeMsgpack(w); err != nil {
 		return err
 	}
 	// Rules
@@ -688,8 +691,8 @@ func (o *Plural) DecodeMsgpack(r *msgpack.Reader) error {
 			return err
 		}
 		switch ord {
-		case 1: // Tag
-			if err = o.Tag.DecodeMsgpack(r); err != nil {
+		case 1: // Category
+			if err = o.Category.DecodeMsgpack(r); err != nil {
 				return err
 			}
 		case 2: // Rules
@@ -1273,10 +1276,10 @@ func (o *MoneyDetails) DecodeMsgpack(r *msgpack.Reader) error {
 
 // PluralDetails contains the replacement details for plurals. Depending on the
 // variable, different text for each plural rule can be selected. It contains
-// the variants for the supported plural tags and custom overwrites.
+// the variants for the supported plural categories and custom overwrites.
 type PluralDetails struct {
 	Type     PluralType
-	Variants map[PluralTag]Message
+	Variants map[PluralCategory]Message
 	Custom   map[int64]Message
 }
 
@@ -1347,10 +1350,10 @@ func (o *PluralDetails) DecodeMsgpack(r *msgpack.Reader) error {
 				return err
 			}
 			if o.Variants == nil {
-				o.Variants = make(map[PluralTag]Message, oVariantsLen)
+				o.Variants = make(map[PluralCategory]Message, oVariantsLen)
 			}
 			for i := 0; i < oVariantsLen; i++ {
-				var k PluralTag
+				var k PluralCategory
 				if err = k.DecodeMsgpack(r); err != nil {
 					return err
 				}

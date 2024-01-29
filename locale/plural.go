@@ -28,15 +28,17 @@ func lookupPlural(loc Locale, lookup pluralRuleLookup) Plural {
 	lang, _, _ := loc.tagIDs()
 	rules, has := lookup[lang]
 	if !has {
-		return Plural{}
+		return Plural{
+			rules: [5]PluralRules{{cat: Other}, {cat: Other}, {cat: Other}, {cat: Other}, {cat: Other}},
+		}
 	}
 	return Plural{
 		rules: [5]PluralRules{
-			{tag: PluralTag(rules[0].tag()), rel: relations.relation(rules[0].relationID())},
-			{tag: PluralTag(rules[1].tag()), rel: relations.relation(rules[1].relationID())},
-			{tag: PluralTag(rules[2].tag()), rel: relations.relation(rules[2].relationID())},
-			{tag: PluralTag(rules[3].tag()), rel: relations.relation(rules[3].relationID())},
-			{tag: PluralTag(rules[4].tag()), rel: relations.relation(rules[4].relationID())},
+			{cat: PluralCategory(rules[0].category()), rel: relations.relation(rules[0].relationID())},
+			{cat: PluralCategory(rules[1].category()), rel: relations.relation(rules[1].relationID())},
+			{cat: PluralCategory(rules[2].category()), rel: relations.relation(rules[2].relationID())},
+			{cat: PluralCategory(rules[3].category()), rel: relations.relation(rules[3].relationID())},
+			{cat: PluralCategory(rules[4].category()), rel: relations.relation(rules[4].relationID())},
 		},
 	}
 }
@@ -44,7 +46,7 @@ func lookupPlural(loc Locale, lookup pluralRuleLookup) Plural {
 func (r *Plural) Rules() []PluralRules {
 	for i := len(r.rules); i > 0; i-- {
 		rules := r.rules[i-1]
-		if rules.tag != 0 || len(rules.rel) != 0 {
+		if rules.cat != Other || len(rules.rel) != 0 {
 			return r.rules[:i]
 		}
 	}
@@ -68,17 +70,17 @@ type PluralRule struct {
 	Connective Connective
 }
 
-// PluralRules holds a collection of plural rules for a specific plural tag.
+// PluralRules holds a collection of plural rules for a specific plural category.
 // All rules in this collection are connected with each other (see PluralRule
 // and Connective).
 type PluralRules struct {
-	tag PluralTag
+	cat PluralCategory
 	rel relation
 }
 
-// Tag returns the plural tag for the plural rules.
-func (r PluralRules) Tag() PluralTag {
-	return r.tag
+// Category returns the plural category for the plural rules.
+func (r PluralRules) Category() PluralCategory {
+	return r.cat
 }
 
 // Iter iterates over all plural rules in the collection. The iterator should
@@ -140,17 +142,17 @@ const (
 	Disjunction Connective = 2
 )
 
-// PluralTag represents a tag for a specific plural form.
-type PluralTag uint8
+// PluralCategory represents a category for a specific plural form.
+type PluralCategory uint8
 
-// Available plural tags.
+// Available plural categories.
 const (
-	Other PluralTag = 0
-	Zero  PluralTag = 1
-	One   PluralTag = 2
-	Two   PluralTag = 3
-	Few   PluralTag = 4
-	Many  PluralTag = 5
+	Zero  PluralCategory = 0
+	One   PluralCategory = 1
+	Two   PluralCategory = 2
+	Few   PluralCategory = 3
+	Many  PluralCategory = 4
+	Other PluralCategory = 5
 )
 
 // Operator represents an operator in a plural rule.
@@ -198,7 +200,7 @@ func (l relationLookup) relation(id relationID) relation {
 
 type pluralRule uint16
 
-func (r pluralRule) tag() uint              { return uint(r>>13) & 0x7 }
+func (r pluralRule) category() uint         { return uint(r>>13) & 0x7 }
 func (r pluralRule) relationID() relationID { return relationID(r & 0x1fff) }
 
 type pluralRuleLookup map[langID][5]pluralRule

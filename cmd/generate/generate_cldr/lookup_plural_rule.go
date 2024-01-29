@@ -15,18 +15,18 @@ var (
 
 type pluralRuleLookup struct {
 	relation *relationLookup
-	tagBits  uint
+	category *pluralCategory
 }
 
-func newPluralRuleLookup(relation *relationLookup) *pluralRuleLookup {
+func newPluralRuleLookup(relation *relationLookup, category *pluralCategory) *pluralRuleLookup {
 	return &pluralRuleLookup{
 		relation: relation,
-		tagBits:  3,
+		category: category,
 	}
 }
 
-func (l *pluralRuleLookup) newPluralRule(tag, relationID uint) uint {
-	return (tag << l.relation.idBits) | relationID
+func (l *pluralRuleLookup) newPluralRule(category, relationID uint) uint {
+	return (category << l.relation.idBits) | relationID
 }
 
 func (l *pluralRuleLookup) Imports() []string {
@@ -34,7 +34,7 @@ func (l *pluralRuleLookup) Imports() []string {
 }
 
 func (l *pluralRuleLookup) Generate(p *generator.Printer) {
-	ruleBits := l.tagBits + l.relation.idBits
+	ruleBits := l.category.bits + l.relation.idBits
 	switch {
 	case ruleBits <= 8:
 		ruleBits = 8
@@ -48,12 +48,12 @@ func (l *pluralRuleLookup) Generate(p *generator.Printer) {
 		panic("invalid plural rule bits")
 	}
 
-	tagMask := fmt.Sprintf("%#x", (1<<l.tagBits)-1)
+	categoryMask := fmt.Sprintf("%#x", (1<<l.category.bits)-1)
 	relationIDMask := fmt.Sprintf("%#x", (1<<l.relation.idBits)-1)
 
 	p.Println(`type pluralRule uint`, ruleBits)
 	p.Println()
-	p.Println(`func (r pluralRule) tag() uint              { return uint(r>>`, l.relation.idBits, `) & `, tagMask, ` }`)
+	p.Println(`func (r pluralRule) category() uint         { return uint(r>>`, l.relation.idBits, `) & `, categoryMask, ` }`)
 	p.Println(`func (r pluralRule) relationID() relationID { return relationID(r & `, relationIDMask, `) }`)
 	p.Println()
 	p.Println(`type pluralRuleLookup map[langID][5]pluralRule`)
@@ -64,15 +64,15 @@ func (l *pluralRuleLookup) TestImports() []string {
 }
 
 func (l *pluralRuleLookup) GenerateTest(p *generator.Printer) {
-	rule := func(tag, relationID uint) string {
-		return fmt.Sprintf("%#x", (tag<<l.relation.idBits)|relationID)
+	rule := func(category, relationID uint) string {
+		return fmt.Sprintf("%#x", (category<<l.relation.idBits)|relationID)
 	}
 
 	p.Println(`func TestPluralRule(t *testing.T) {`)
 	p.Println(`	const rule pluralRule = `, rule(2, 7))
 	p.Println()
-	p.Println(`	if tag := rule.tag(); tag != 2 {`)
-	p.Println(`		t.Errorf("unexpected tag: %d", tag)`)
+	p.Println(`	if category := rule.category(); category != 2 {`)
+	p.Println(`		t.Errorf("unexpected category: %d", category)`)
 	p.Println(`	}`)
 	p.Println(`	if rid := rule.relationID(); rid != 7 {`)
 	p.Println(`		t.Errorf("unexpected relation id: %d", rid)`)
@@ -87,14 +87,14 @@ var (
 type pluralRuleLookupVar struct {
 	name      string
 	typ       *pluralRuleLookup
-	tag       *pluralTag
+	category  *pluralCategory
 	langs     *langLookupVar
 	relations *relationLookupVar
 
 	data []pluralRulesData
 }
 
-func newPluralRuleLookupVar(name string, typ *pluralRuleLookup, tag *pluralTag, langs *langLookupVar, relations *relationLookupVar, data *cldr.Data, pluralsType pluralRulesType) *pluralRuleLookupVar {
+func newPluralRuleLookupVar(name string, typ *pluralRuleLookup, category *pluralCategory, langs *langLookupVar, relations *relationLookupVar, data *cldr.Data, pluralsType pluralRulesType) *pluralRuleLookupVar {
 	rulesData := make([]pluralRulesData, 0, 8)
 	forEachPluralRules(data, pluralsType, func(data pluralRulesData) {
 		switch len(data.rules) {
@@ -102,7 +102,7 @@ func newPluralRuleLookupVar(name string, typ *pluralRuleLookup, tag *pluralTag, 
 			return
 		case 1:
 			if _, has := data.rules[cldr.Other]; has {
-				return // we only have the "other" tag
+				return // we only have the "other" category
 			}
 		}
 
@@ -116,20 +116,28 @@ func newPluralRuleLookupVar(name string, typ *pluralRuleLookup, tag *pluralTag, 
 	return &pluralRuleLookupVar{
 		name:      name,
 		typ:       typ,
-		tag:       tag,
+		category:  category,
 		langs:     langs,
 		relations: relations,
 		data:      rulesData,
 	}
 }
 
-func (v *pluralRuleLookupVar) rulesForLang(lang string) map[string]cldr.PluralRule {
+func (v *pluralRuleLookupVar) forEachPluralRuleForLang(lang string, iter func(category uint, rule cldr.PluralRule)) {
 	for _, data := range v.data {
 		if data.lang == lang {
-			return data.rules
+			v.forEachPluralRule(data, iter)
+			return
 		}
 	}
-	return nil
+}
+
+func (v *pluralRuleLookupVar) forEachPluralRule(data pluralRulesData, iter func(category uint, rule cldr.PluralRule)) {
+	for _, category := range [...]uint{v.category.zero, v.category.one, v.category.two, v.category.few, v.category.many} {
+		if rule, has := data.rules[v.category.cldrConstantOf(category)]; has {
+			iter(category, rule)
+		}
+	}
 }
 
 func (v *pluralRuleLookupVar) Imports() []string {
@@ -137,7 +145,7 @@ func (v *pluralRuleLookupVar) Imports() []string {
 }
 
 func (v *pluralRuleLookupVar) Generate(p *generator.Printer) {
-	pluralRuleBits := v.typ.tagBits + v.relations.typ.idBits
+	pluralRuleBits := v.typ.category.bits + v.relations.typ.idBits
 	switch {
 	case pluralRuleBits <= 8:
 		pluralRuleBits = 8
@@ -151,35 +159,23 @@ func (v *pluralRuleLookupVar) Generate(p *generator.Printer) {
 		panic("invalid plural rule bits")
 	}
 
-	pluralTags := map[string]uint{
-		cldr.Other: v.tag.other,
-		cldr.Zero:  v.tag.zero,
-		cldr.One:   v.tag.one,
-		cldr.Two:   v.tag.two,
-		cldr.Few:   v.tag.few,
-		cldr.Many:  v.tag.many,
-	}
-
-	p.Println(`var `, v.name, ` = pluralRuleLookup{ // `, len(v.data), ` items, `, 5*uint(len(v.data))*pluralRuleBits/4, ` bytes`)
-
 	hex := func(v, bits uint) string {
 		return fmt.Sprintf("%#0[2]*[1]x", v, (bits+3)/4)
 	}
 
-	for i := 0; i < len(v.data); i++ {
-		data := v.data[i]
+	p.Println(`var `, v.name, ` = pluralRuleLookup{ // `, len(v.data), ` items, `, 5*uint(len(v.data))*pluralRuleBits/4, ` bytes`)
+	for _, data := range v.data {
 		langID := v.langs.langID(data.lang)
 
 		var pluralRules [5]uint
 		idx := 0
-		for _, tag := range [...]string{cldr.Zero, cldr.One, cldr.Two, cldr.Few, cldr.Many} {
-			if rule, has := data.rules[tag]; has {
-				pluralRules[idx] = v.typ.newPluralRule(pluralTags[tag], v.relations.relationID(rule))
-				idx++
-			}
-		}
+		v.forEachPluralRule(data, func(category uint, rule cldr.PluralRule) {
+			pluralRules[idx] = v.typ.newPluralRule(category, v.relations.relationID(rule))
+			idx++
+		})
+
 		for ; idx < len(pluralRules); idx++ {
-			pluralRules[idx] = v.typ.newPluralRule(v.tag.other, 0) // "other" marks the end
+			pluralRules[idx] = v.typ.newPluralRule(v.category.other, 0) // "other" marks the end
 		}
 
 		p.Print(`	`, hex(langID, v.langs.typ.idBits), `: {`)

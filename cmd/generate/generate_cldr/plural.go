@@ -16,16 +16,18 @@ var (
 type plural struct {
 	operation     *pluralOperation
 	connective    *connective
+	category      *pluralCategory
 	tags          *tagLookupVar
 	relations     *relationLookupVar
 	cardinalRules *pluralRuleLookupVar
 	ordinalRules  *pluralRuleLookupVar
 }
 
-func newPlural(opration *pluralOperation, connective *connective, tags *tagLookupVar, relations *relationLookupVar, cardinalRules, ordinalRules *pluralRuleLookupVar) *plural {
+func newPlural(opration *pluralOperation, connective *connective, category *pluralCategory, tags *tagLookupVar, relations *relationLookupVar, cardinalRules, ordinalRules *pluralRuleLookupVar) *plural {
 	return &plural{
 		operation:     opration,
 		connective:    connective,
+		category:      category,
 		tags:          tags,
 		relations:     relations,
 		cardinalRules: cardinalRules,
@@ -38,6 +40,8 @@ func (pl *plural) Imports() []string {
 }
 
 func (pl *plural) Generate(p *generator.Printer) {
+	other := pl.category.enumeratorOf(pl.category.other)
+
 	p.Println(`// Plural holds the plural data for a language. There can at most be five plural rule`)
 	p.Println(`// collections for 'zero', 'one', 'two', 'few', and 'many'. If there are less than five`)
 	p.Println(`// rules, the rest will be filled with empty 'other' rules.`)
@@ -63,15 +67,17 @@ func (pl *plural) Generate(p *generator.Printer) {
 	p.Println(`	lang, _, _ := loc.tagIDs()`)
 	p.Println(`	rules, has := lookup[lang]`)
 	p.Println(`	if !has {`)
-	p.Println(`		return Plural{}`)
+	p.Println(`		return Plural{`)
+	p.Println(`			rules: [5]PluralRules{{cat: `, other, `}, {cat: `, other, `}, {cat: `, other, `}, {cat: `, other, `}, {cat: `, other, `}},`)
+	p.Println(`		}`)
 	p.Println(`	}`)
 	p.Println(`	return Plural{`)
 	p.Println(`		rules: [5]PluralRules{`)
-	p.Println(`			{tag: PluralTag(rules[0].tag()), rel: `, pl.relations.name, `.relation(rules[0].relationID())},`)
-	p.Println(`			{tag: PluralTag(rules[1].tag()), rel: `, pl.relations.name, `.relation(rules[1].relationID())},`)
-	p.Println(`			{tag: PluralTag(rules[2].tag()), rel: `, pl.relations.name, `.relation(rules[2].relationID())},`)
-	p.Println(`			{tag: PluralTag(rules[3].tag()), rel: `, pl.relations.name, `.relation(rules[3].relationID())},`)
-	p.Println(`			{tag: PluralTag(rules[4].tag()), rel: `, pl.relations.name, `.relation(rules[4].relationID())},`)
+	p.Println(`			{cat: PluralCategory(rules[0].category()), rel: `, pl.relations.name, `.relation(rules[0].relationID())},`)
+	p.Println(`			{cat: PluralCategory(rules[1].category()), rel: `, pl.relations.name, `.relation(rules[1].relationID())},`)
+	p.Println(`			{cat: PluralCategory(rules[2].category()), rel: `, pl.relations.name, `.relation(rules[2].relationID())},`)
+	p.Println(`			{cat: PluralCategory(rules[3].category()), rel: `, pl.relations.name, `.relation(rules[3].relationID())},`)
+	p.Println(`			{cat: PluralCategory(rules[4].category()), rel: `, pl.relations.name, `.relation(rules[4].relationID())},`)
 	p.Println(`		},`)
 	p.Println(`	}`)
 	p.Println(`}`)
@@ -79,7 +85,7 @@ func (pl *plural) Generate(p *generator.Printer) {
 	p.Println(`func (r *Plural) Rules() []PluralRules {`)
 	p.Println(`	for i := len(r.rules); i > 0; i-- {`)
 	p.Println(`		rules := r.rules[i-1]`)
-	p.Println(`		if rules.tag != 0 || len(rules.rel) != 0 {`)
+	p.Println(`		if rules.cat != `, other, ` || len(rules.rel) != 0 {`)
 	p.Println(`			return r.rules[:i]`)
 	p.Println(`		}`)
 	p.Println(`	}`)
@@ -103,17 +109,17 @@ func (pl *plural) Generate(p *generator.Printer) {
 	p.Println(`	Connective Connective`)
 	p.Println(`}`)
 	p.Println()
-	p.Println(`// PluralRules holds a collection of plural rules for a specific plural tag.`)
+	p.Println(`// PluralRules holds a collection of plural rules for a specific plural category.`)
 	p.Println(`// All rules in this collection are connected with each other (see PluralRule`)
 	p.Println(`// and Connective).`)
 	p.Println(`type PluralRules struct {`)
-	p.Println(`	tag PluralTag`)
+	p.Println(`	cat PluralCategory`)
 	p.Println(`	rel relation`)
 	p.Println(`}`)
 	p.Println()
-	p.Println(`// Tag returns the plural tag for the plural rules.`)
-	p.Println(`func (r PluralRules) Tag() PluralTag {`)
-	p.Println(`	return r.tag`)
+	p.Println(`// Category returns the plural category for the plural rules.`)
+	p.Println(`func (r PluralRules) Category() PluralCategory {`)
+	p.Println(`	return r.cat`)
 	p.Println(`}`)
 	p.Println()
 	p.Println(`// Iter iterates over all plural rules in the collection. The iterator should`)
@@ -174,35 +180,48 @@ func (pl *plural) GenerateTest(p *generator.Printer) {
 	}
 
 	newPlural := func(id cldr.Identity, pluralRules *pluralRuleLookupVar) string {
-		rulesMap := pluralRules.rulesForLang(id.Language)
-		if len(rulesMap) == 0 {
-			return "{}"
-		}
+		rules := [5]string{}
+		idx := 0
 
-		var (
-			rules [5]string
-			idx   int
-		)
+		pluralRules.forEachPluralRuleForLang(id.Language, func(category uint, rule cldr.PluralRule) {
+			rules[idx] = fmt.Sprintf("{cat: %s, rel: "+pl.relations.name+".relation(%#x)}", pl.category.enumeratorOf(category), pl.relations.relationID(rule))
+			idx++
+		})
 
-		for _, tag := range [...]string{cldr.Zero, cldr.One, cldr.Two, cldr.Few, cldr.Many} {
-			if rule, has := rulesMap[tag]; has {
-				rules[idx] = fmt.Sprintf("{tag: %s, rel: "+pl.relations.name+".relation(%#x)}", strings.Title(tag), pl.relations.relationID(rule))
-				idx++
-			}
+		if idx == 0 {
+			return "nil"
 		}
-		for ; idx < len(rules); idx++ {
-			rules[idx] = "{}"
-		}
-
-		return fmt.Sprintf("{rules: [5]PluralRules{%s}}", strings.Join(rules[:], ", "))
+		return fmt.Sprintf("{%s}", strings.Join(rules[:idx], ", "))
 	}
 
 	printPlurals := func(rules *pluralRuleLookupVar) {
+		maxIDLen := 0
 		for _, id := range pl.tags.ids {
-			p.Println(`		`, newLocale(id), `: `, newPlural(id, rules), `,`)
+			if n := len(id.String()); n > maxIDLen {
+				maxIDLen = n
+			}
 		}
+
+		for _, id := range pl.tags.ids {
+			ident := id.String()
+			ident += strings.Repeat(" ", maxIDLen-len(ident))
+			p.Println(`		/* `, ident, ` */ `, newLocale(id), `: `, newPlural(id, rules), `,`)
+		}
+
 	}
 
+	p.Println(`func TestLookupPlural(t *testing.T) {`)
+	p.Println(`	// cardinal plurals`)
+	p.Println(`	testLookupPlural(t, "cardinal", CardinalPlural, map[Locale][]PluralRules{`)
+	printPlurals(pl.cardinalRules)
+	p.Println(`	})`)
+	p.Println()
+	p.Println(`	// ordinal plurals`)
+	p.Println(`	testLookupPlural(t, "ordinal", OrdinalPlural, map[Locale][]PluralRules{`)
+	printPlurals(pl.ordinalRules)
+	p.Println(`	})`)
+	p.Println(`}`)
+	p.Println()
 	p.Println(`func TestRanges(t *testing.T) {`)
 	p.Println(`	ranges := Ranges{r: []uint`, pl.relations.typ.pluralChunkBits, `{1, 2, 3, 4}}`)
 	p.Println()
@@ -246,23 +265,12 @@ func (pl *plural) GenerateTest(p *generator.Printer) {
 	p.Println(`	}`)
 	p.Println(`}`)
 	p.Println()
-	p.Println(`func TestLookupPlural(t *testing.T) {`)
-	p.Println(`	// cardinal plurals`)
-	p.Println(`	testLookupPlural(t, "cardinal", CardinalPlural, map[Locale]Plural{`)
-	printPlurals(pl.cardinalRules)
-	p.Println(`	})`)
-	p.Println()
-	p.Println(`	// ordinal plurals`)
-	p.Println(`	testLookupPlural(t, "ordinal", OrdinalPlural, map[Locale]Plural{`)
-	printPlurals(pl.ordinalRules)
-	p.Println(`	})`)
-	p.Println(`}`)
-	p.Println()
-	p.Println(`func testLookupPlural(t *testing.T, typ string, lookup func(Locale) Plural, expected map[Locale]Plural) {`)
-	p.Println(`	for loc, expectedPlural := range expected {`)
+	p.Println(`func testLookupPlural(t *testing.T, typ string, lookup func(Locale) Plural, expected map[Locale][]PluralRules) {`)
+	p.Println(`	for loc, expectedRules := range expected {`)
 	p.Println(`		plural := lookup(loc)`)
-	p.Println(`		if !reflect.DeepEqual(plural, expectedPlural) {`)
-	p.Println(`			t.Fatalf("unexpected plural for %s", loc.String())`)
+	p.Println(`		rules := plural.Rules()`)
+	p.Println(`		if !reflect.DeepEqual(rules, expectedRules) {`)
+	p.Println(`			t.Fatalf("unexpected %s plural for %s", typ, loc.String())`)
 	p.Println(`		}`)
 	p.Println(`	}`)
 	p.Println(`}`)

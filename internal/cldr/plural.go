@@ -12,7 +12,7 @@ import (
 	"github.com/liblxn/lxnc/internal/errors"
 )
 
-// Available plural tags.
+// Available plural categories.
 const (
 	Zero  = "zero"
 	One   = "one"
@@ -53,7 +53,7 @@ func (p *Plurals) decode(d *xmlDecoder, elem xml.StartElement) {
 // PluralRules holds the plural rules for a group of locales.
 type PluralRules struct {
 	Locales []string
-	Rules   map[string]PluralRule // plural tag => rule
+	Rules   map[string]PluralRule // plural category => rule
 }
 
 func (p *PluralRules) decode(d *xmlDecoder, elem xml.StartElement) {
@@ -63,17 +63,17 @@ func (p *PluralRules) decode(d *xmlDecoder, elem xml.StartElement) {
 
 	p.Rules = make(map[string]PluralRule)
 	d.DecodeElem("pluralRule", func(d *xmlDecoder, elem xml.StartElement) {
-		tag := xmlAttrib(elem, "count")
-		if tag == "" {
-			tag = Other
+		category := xmlAttrib(elem, "count")
+		if category == "" {
+			category = Other
 		}
 
 		parser := pluralRuleParser{}
 		ruleStr := d.ReadString(elem)
 		if rule, err := parser.parse(ruleStr); err != nil {
-			d.ReportErr(errors.Newf("error in plural rule %s (%s): %v", tag, ruleStr, err), elem)
+			d.ReportErr(errors.Newf("error in plural rule %s (%s): %v", category, ruleStr, err), elem)
 		} else {
-			p.Rules[tag] = rule
+			p.Rules[category] = rule
 		}
 		d.SkipElem()
 	})
@@ -83,6 +83,8 @@ func (p *PluralRules) decode(d *xmlDecoder, elem xml.StartElement) {
 type Operand rune
 
 // Available operands for the plural rules.
+//
+// https://unicode.org/reports/tr35/tr35-numbers.html#Operands
 const (
 	AbsoluteValue               Operand = 'n' // absolute value of the source number
 	IntegerDigits               Operand = 'i' // integer digits of n
@@ -275,7 +277,9 @@ func (r *PluralRule) writeTo(w io.Writer) {
 // value           = digit+
 //
 // samples         = ('@integer' sampleList)?
-//                   ('@decimal' sampleList)?
+//
+//	('@decimal' sampleList)?
+//
 // sampleList      = sampleRange (',' sampleRange)* (',' ('…'|'...'))?
 // sampleRange     = sampleValue ('~' sampleValue)?
 // sampleValue     = value ('.' value)? ([ce] digitPos digit+)?

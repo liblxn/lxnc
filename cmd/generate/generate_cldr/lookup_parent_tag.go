@@ -145,7 +145,6 @@ func (v *parentTagLookupVar) Generate(p *generator.Printer) {
 	}
 
 	digitsPerElem := bits / 4
-	perLine := int(lineLength / (digitsPerElem + 4)) // additional "0x" and ", "
 
 	hex := func(data parentTagData) string {
 		childID := v.tags.tagID(data.child)
@@ -154,28 +153,9 @@ func (v *parentTagLookupVar) Generate(p *generator.Printer) {
 	}
 
 	p.Println(`var `, v.name, ` = parentTagLookup{ // `, len(v.data), ` items, `, uint(len(v.data))*bits/8, ` bytes`)
-
-	for i := 0; i < len(v.data); i += perLine {
-		n := i + perLine
-		if n > len(v.data) {
-			n = len(v.data)
-		}
-
-		p.Print(`	`, hex(v.data[i]), `, `)
-		for k := i + 1; k < n; k++ {
-			p.Print(hex(v.data[k]), `, `)
-		}
-		p.Print(`// `)
-		for k := i; k < n; k++ {
-			p.Print(v.data[k].child.String(), ` -> `, v.data[k].parent.String())
-			if k < n-1 {
-				p.Print(`, `)
-			}
-		}
-		p.Println()
-
+	for _, data := range v.data {
+		p.Println(`	`, hex(data), `, // `, data.child.String(), ` -> `, data.parent.String())
 	}
-
 	p.Println(`}`)
 }
 
@@ -191,18 +171,8 @@ func (v *parentTagLookupVar) GenerateTest(p *generator.Printer) {
 	p.Println(`func Test`, strings.Title(v.name), `(t *testing.T) {`)
 	p.Println(`	expected := map[tagID]tagID{`)
 
-	perLine := int(lineLength / (2 + 2*v.tags.typ.idBits/4))
-	for i := 0; i < len(v.data); i += perLine {
-		n := i + perLine
-		if n > len(v.data) {
-			n = len(v.data)
-		}
-
-		p.Print(`		`, tagID(v.data[i].child), `: `, tagID(v.data[i].parent))
-		for k := i + 1; k < n; k++ {
-			p.Print(`, `, tagID(v.data[k].child), `: `, tagID(v.data[k].parent))
-		}
-		p.Println(`,`)
+	for _, data := range v.data {
+		p.Println(`		`, tagID(data.child), `: `, tagID(data.parent), `,`)
 	}
 
 	p.Println(`	}`)

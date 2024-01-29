@@ -3,8 +3,8 @@ package lxn
 import "github.com/liblxn/lxnc/locale"
 
 // NewCatalog returns a new catalog from the given locale data and the messages.
-func NewCatalog(localeData locale.Locale, messages []Message) Catalog {
-	return Catalog{
+func NewCatalog(localeData locale.Locale, messages []Message) *Catalog {
+	return &Catalog{
 		Locale:   NewLocale(localeData),
 		Messages: messages,
 	}
@@ -54,10 +54,34 @@ func newNumberFormat(nf locale.NumberFormat) NumberFormat {
 func newPlurals(p locale.Plural) []Plural {
 	var res []Plural
 	for _, rules := range p.Rules() {
-		plural := Plural{Tag: PluralTag(rules.Tag())}
+		plural := Plural{Category: PluralCategory(rules.Category())}
 		rules.Iter(func(r locale.PluralRule) {
 			plural.Rules = append(plural.Rules, newPluralRule(r))
 		})
 	}
 	return res
+}
+
+func newPluralRule(r locale.PluralRule) PluralRule {
+	nranges := r.Ranges.Len()
+	ranges := make([]Range, nranges)
+	for i := 0; i < nranges; i++ {
+		ranges[i] = Range(r.Ranges.At(i))
+	}
+
+	mod := 0
+	if r.ModuloExp > 0 {
+		mod = 10
+		for i := 1; i < r.ModuloExp; i++ {
+			mod *= 10
+		}
+	}
+
+	return PluralRule{
+		Operand:    Operand(r.Operand),
+		Modulo:     mod,
+		Negate:     r.Operator == locale.NotEqual,
+		Ranges:     ranges,
+		Connective: Connective(r.Connective),
+	}
 }

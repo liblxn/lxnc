@@ -73,19 +73,25 @@ func (i *Identity) decode(d *xmlDecoder, _ xml.StartElement) {
 // ParentIdentities holds the data for the parent relationship of identities.
 type ParentIdentities map[string]string // locale => parent locale
 
-func (p *ParentIdentities) decode(d *xmlDecoder, _ xml.StartElement) {
-	*p = make(ParentIdentities)
+func (p *ParentIdentities) decode(d *xmlDecoder, elem xml.StartElement) {
+	if xmlAttrib(elem, "component") != "" {
+		d.SkipElem()
+		return
+	}
 
+	parentIdents := make(ParentIdentities)
 	d.DecodeElem("parentLocale", func(d *xmlDecoder, elem xml.StartElement) {
 		parent := normalizeTag(xmlAttrib(elem, "parent"))
 		children := strings.Split(xmlAttrib(elem, "locales"), " ")
 		for _, child := range children {
-			(*p)[normalizeTag(child)] = parent
+			parentIdents[normalizeTag(child)] = parent
 		}
 		d.SkipElem()
 	})
+
+	*p = parentIdents
 }
 
 func normalizeTag(tag string) string {
-	return strings.Replace(tag, "_", subtagSep, -1)
+	return strings.ReplaceAll(tag, "_", subtagSep)
 }

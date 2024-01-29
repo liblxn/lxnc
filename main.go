@@ -17,7 +17,7 @@ const targetExt = ".lxnc"
 
 type compilation struct {
 	files []string
-	cat   lxn.Catalog
+	cat   *lxn.Catalog
 	bin   []byte
 }
 
@@ -79,7 +79,7 @@ func compile(loc locale.Locale, filenames []string) (c compilation, err error) {
 	}
 
 	var buf bytes.Buffer
-	if err = msgpack.Encode(&buf, &c.cat); err != nil {
+	if err = msgpack.Encode(&buf, c.cat); err != nil {
 		return c, err
 	}
 	c.bin = buf.Bytes()

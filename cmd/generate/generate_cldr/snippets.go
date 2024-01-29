@@ -42,12 +42,12 @@ func FileSnippets(packageName string, data *cldr.Data) map[string]generator.Snip
 	connective := newConnective()
 	pluralOperation := newPluralOperation()
 	relationLookup := newRelationLookup(pluralOperation, connective)
-	pluralRuleLookup := newPluralRuleLookup(relationLookup)
-	pluralTag := newPluralTag()
+	pluralCategory := newPluralCategory()
+	pluralRuleLookup := newPluralRuleLookup(relationLookup, pluralCategory)
 
 	relationLookupVar := newRelationLookupVar("relations", relationLookup, pluralOperation, data)
-	cardinalPluralRulesLookupVar := newPluralRuleLookupVar("cardinalRules", pluralRuleLookup, pluralTag, langLookupVar, relationLookupVar, data, cardinalPluralRules)
-	ordinalPluralRulesLookupVar := newPluralRuleLookupVar("ordinalRules", pluralRuleLookup, pluralTag, langLookupVar, relationLookupVar, data, ordinalPluralRules)
+	cardinalPluralRulesLookupVar := newPluralRuleLookupVar("cardinalRules", pluralRuleLookup, pluralCategory, langLookupVar, relationLookupVar, data, cardinalPluralRules)
+	ordinalPluralRulesLookupVar := newPluralRuleLookupVar("ordinalRules", pluralRuleLookup, pluralCategory, langLookupVar, relationLookupVar, data, ordinalPluralRules)
 
 	return map[string]generator.Snippet{
 		"locale.go": generator.Snippets{
@@ -68,9 +68,9 @@ func FileSnippets(packageName string, data *cldr.Data) map[string]generator.Snip
 			numbersLookup,
 		},
 		"plural.go": generator.Snippets{
-			newPlural(pluralOperation, connective, tagLookupVar, relationLookupVar, cardinalPluralRulesLookupVar, ordinalPluralRulesLookupVar),
+			newPlural(pluralOperation, connective, pluralCategory, tagLookupVar, relationLookupVar, cardinalPluralRulesLookupVar, ordinalPluralRulesLookupVar),
 			connective,
-			pluralTag,
+			pluralCategory,
 			pluralOperation,
 			relationLookup,
 			pluralRuleLookup,

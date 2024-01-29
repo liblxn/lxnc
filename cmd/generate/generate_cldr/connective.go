@@ -1,6 +1,9 @@
 package generate_cldr
 
-import "github.com/liblxn/lxnc/internal/generator"
+import (
+	"github.com/liblxn/lxnc/internal/generator"
+	"github.com/liblxn/lxnc/lxn"
+)
 
 var (
 	_ generator.Snippet = (*connective)(nil)
@@ -15,13 +18,22 @@ type connective struct {
 }
 
 func newConnective() *connective {
-	return &connective{
+	c := &connective{
 		bits: 2,
 
-		none:        0,
-		conjunction: 1,
-		disjunction: 2,
+		none:        uint(lxn.None),
+		conjunction: uint(lxn.Conjunction),
+		disjunction: uint(lxn.Disjunction),
 	}
+
+	max := uint(1<<c.bits) - 1
+	for _, v := range []uint{c.none, c.conjunction, c.disjunction} {
+		if v > max {
+			panic("connective out of range")
+		}
+	}
+
+	return c
 }
 
 func (c *connective) Imports() []string {

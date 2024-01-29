@@ -168,8 +168,8 @@ func newTagLookupVar(name string, typ *tagLookup, langs *langLookupVar, scripts 
 		idMap[id] = struct{}{}
 	})
 
-	if len(idMap) == (1 << typ.idBits) {
-		panic(fmt.Sprintf("number of tags exceeds the maximum"))
+	if len(idMap) >= (1 << typ.idBits) {
+		panic("number of tags exceeds the maximum")
 	}
 
 	ids := make([]cldr.Identity, 0, len(idMap))
@@ -273,7 +273,7 @@ func (v *tagLookupVar) GenerateTest(p *generator.Printer) {
 	}
 
 	p.Println(`func Test`, strings.Title(v.name), `(t *testing.T) {`)
-	p.Println(`	expected := map[tagID]tag{ // tag id => tag id`)
+	p.Println(`	expected := map[tagID]tag{ // tag id => tag`)
 
 	perLine := int(lineLength / ((v.typ.idBits + v.langs.typ.idBits + v.scripts.typ.idBits + v.regions.typ.idBits) / 4))
 	for i := 0; i < len(v.ids); i += perLine {

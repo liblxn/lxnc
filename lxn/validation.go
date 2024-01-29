@@ -8,7 +8,7 @@ type Validator struct {
 	Warn func(msg string)
 }
 
-func Validate(c Catalog, v Validator) {
+func Validate(c *Catalog, v Validator) {
 	warnf := func(format string, args ...any) {
 		if v.Warn != nil {
 			v.Warn(fmt.Sprintf(format, args...))
