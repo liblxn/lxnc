@@ -14,35 +14,29 @@ var _ = fmt.Errorf
 var _ time.Time
 var _ *msgpack.Writer
 
-// Catalog holds the data for a message catalog which includes localized
-// messages and the locale information needed to format numbers and plurals.
+// Catalog holds messages for a single locale. It corresponds to a the contents
+// of one or more translation files. If you'd like to format translated
+// messages propery you need a dictionary, which also contains all the locale
+// information.
 type Catalog struct {
-	Version  int
-	Locale   Locale
+	LocaleID string
 	Messages []Message
 }
 
 // EncodeMsgpack implements the Encoder interface for Catalog.
 func (o Catalog) EncodeMsgpack(w *msgpack.Writer) (err error) {
-	if err = w.WriteMapHeader(3); err != nil {
+	if err = w.WriteMapHeader(2); err != nil {
 		return err
 	}
-	// Version
+	// LocaleID
 	if err = w.WriteInt64(1); err != nil {
 		return err
 	}
-	if err = w.WriteInt(o.Version); err != nil {
-		return err
-	}
-	// Locale
-	if err = w.WriteInt64(2); err != nil {
-		return err
-	}
-	if err = o.Locale.EncodeMsgpack(w); err != nil {
+	if err = w.WriteString(o.LocaleID); err != nil {
 		return err
 	}
 	// Messages
-	if err = w.WriteInt64(3); err != nil {
+	if err = w.WriteInt64(2); err != nil {
 		return err
 	}
 	if err = w.WriteArrayHeader(len(o.Messages)); err != nil {
@@ -68,15 +62,86 @@ func (o *Catalog) DecodeMsgpack(r *msgpack.Reader) error {
 			return err
 		}
 		switch ord {
-		case 1: // Version
-			if o.Version, err = r.ReadInt(); err != nil {
+		case 1: // LocaleID
+			if o.LocaleID, err = r.ReadString(); err != nil {
 				return err
 			}
-		case 2: // Locale
+		case 2: // Messages
+			oMessagesLen, err := r.ReadArrayHeader()
+			if err != nil {
+				return err
+			}
+			if cap(o.Messages) < oMessagesLen {
+				o.Messages = make([]Message, oMessagesLen)
+			} else {
+				o.Messages = o.Messages[:oMessagesLen]
+			}
+			for i := 0; i < oMessagesLen; i++ {
+				if err = o.Messages[i].DecodeMsgpack(r); err != nil {
+					return err
+				}
+			}
+		default:
+			if err := r.Skip(); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+// Dictionary is used to translate and format messages for the specified locale.
+// It holds all the messages (like Catalog), but also contains all the information
+// needed to format numbers and plurals in this locale.
+type Dictionary struct {
+	Locale   Locale
+	Messages []Message
+}
+
+// EncodeMsgpack implements the Encoder interface for Dictionary.
+func (o Dictionary) EncodeMsgpack(w *msgpack.Writer) (err error) {
+	if err = w.WriteMapHeader(2); err != nil {
+		return err
+	}
+	// Locale
+	if err = w.WriteInt64(1); err != nil {
+		return err
+	}
+	if err = o.Locale.EncodeMsgpack(w); err != nil {
+		return err
+	}
+	// Messages
+	if err = w.WriteInt64(2); err != nil {
+		return err
+	}
+	if err = w.WriteArrayHeader(len(o.Messages)); err != nil {
+		return err
+	}
+	for _, e := range o.Messages {
+		if err = e.EncodeMsgpack(w); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// DecodeMsgpack implements the Decoder interface for Dictionary.
+func (o *Dictionary) DecodeMsgpack(r *msgpack.Reader) error {
+	n, err := r.ReadMapHeader()
+	if err != nil {
+		return err
+	}
+	for i := 0; i < n; i++ {
+		ord, err := r.ReadInt64()
+		if err != nil {
+			return err
+		}
+		switch ord {
+		case 1: // Locale
 			if err = o.Locale.DecodeMsgpack(r); err != nil {
 				return err
 			}
-		case 3: // Messages
+		case 2: // Messages
 			oMessagesLen, err := r.ReadArrayHeader()
 			if err != nil {
 				return err

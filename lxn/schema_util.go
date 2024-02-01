@@ -5,14 +5,23 @@ import "github.com/liblxn/lxnc/locale"
 // NewCatalog returns a new catalog from the given locale data and the messages.
 func NewCatalog(localeData locale.Locale, messages []Message) *Catalog {
 	return &Catalog{
-		Locale:   NewLocale(localeData),
+		LocaleID: localeData.String(),
+		Messages: messages,
+	}
+}
+
+// NewDictionary returns a new dictionary from the given locale data and the
+// messages.
+func NewDictionary(localeData locale.Locale, messages []Message) *Dictionary {
+	return &Dictionary{
+		Locale:   *NewLocale(localeData),
 		Messages: messages,
 	}
 }
 
 // NewLocale returns a new locale from the given locale data.
-func NewLocale(localeData locale.Locale) Locale {
-	return Locale{
+func NewLocale(localeData locale.Locale) *Locale {
+	return &Locale{
 		ID:              localeData.String(),
 		DecimalFormat:   newNumberFormat(locale.DecimalFormat(localeData)),
 		MoneyFormat:     newNumberFormat(locale.MoneyFormat(localeData)),
