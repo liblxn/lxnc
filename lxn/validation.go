@@ -4,20 +4,20 @@ import (
 	"fmt"
 )
 
-type Validator struct {
-	Warn func(msg string)
+type Validator interface {
+	Warn(msg string)
 }
 
-func Validate(c *Catalog, v Validator) {
+func ValidateMessages(messages []Message, v Validator) {
 	warnf := func(format string, args ...any) {
-		if v.Warn != nil {
+		if v != nil {
 			v.Warn(fmt.Sprintf(format, args...))
 		}
 	}
 
 	messageKeys := make(map[string]map[string]struct{}) // section => key set
 	warnedDuplicates := make(map[string]struct{})       // (section, message key) set
-	for _, msg := range c.Messages {
+	for _, msg := range messages {
 		keys, has := messageKeys[msg.Section]
 		if !has {
 			keys = make(map[string]struct{})

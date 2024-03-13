@@ -1,6 +1,12 @@
 DATA ?= $(CURDIR)/data
 
 
+
+.PHONY: build
+build:
+	go build -o bin/lxnc .
+
+
 .PHONY: test
 test:
 	go test ./...

@@ -4,8 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"os"
-	"path/filepath"
-	"strings"
 
 	msgpack "github.com/mprot/msgpack-go"
 
@@ -22,74 +20,109 @@ type compilation struct {
 }
 
 func main() {
-	conf := parseCommandLine()
+	opts := parseCommandLine()
 
-	loc, err := locale.New(conf.localeTag)
+	var cat *lxn.Catalog
+	switch opts.command {
+	case compileCommand:
+		cat = compile(opts.locale, opts.inputFiles)
+	case bundleCommand:
+		cat = bundle(opts.inputFiles)
+	default:
+		fatalf("unknown command %q", opts.command)
+	}
+
+	if cat == nil {
+		return
+	}
+
+	lxn.ValidateMessages(cat.Messages, warner{})
+
+	var out bytes.Buffer
+	if opts.catalog {
+		if err := msgpack.Encode(&out, cat); err != nil {
+			fatalf("error encoding catalog: %v", err)
+		}
+	} else {
+		loc, err := locale.New(cat.LocaleID)
+		if err != nil {
+			fatalf("%v", err)
+		}
+
+		dic := lxn.NewDictionary(loc, cat.Messages)
+		if err := msgpack.Encode(&out, dic); err != nil {
+			fatalf("error encoding dictionary: %v", err)
+		}
+	}
+
+	output := opts.outputFile
+	if output == "" {
+		output = cat.LocaleID + ".lxnc"
+	}
+
+	err := os.WriteFile(output, out.Bytes(), 0666)
+	if err != nil {
+		fatalf("error writing %s: %v", output, err)
+	}
+}
+
+func compile(localeID string, inputFiles []string) *lxn.Catalog {
+	switch {
+	case localeID == "":
+		fatalf("missing locale")
+	case len(inputFiles) == 0:
+		return nil
+	}
+
+	loc, err := locale.New(localeID)
 	if err != nil {
 		fatalf("%v", err)
 	}
 
-	// compile input files
-	compilations := make(map[string]compilation) // target => compilation
-	if conf.merge {
-		c, err := compile(loc, conf.inputFiles)
-		if err != nil {
-			fatalf("%v", err)
-		}
+	cat, err := lxn.CompileCatalog(loc, inputFiles...)
+	if err != nil {
+		fatalf("%v", err)
+	}
+	return cat
+}
 
-		target := conf.mergeTarget
-		if target == "" {
-			target = loc.String() + targetExt
-		}
-		compilations[target] = c
-	} else {
-		for i := 0; i < len(conf.inputFiles); i++ {
-			c, err := compile(loc, conf.inputFiles[i:i+1])
-			if err != nil {
-				fatalf("%v", err)
-			}
-
-			target := conf.inputFiles[i]
-			if ext := filepath.Ext(target); ext != "" {
-				target = strings.TrimSuffix(target, ext) + targetExt
-			}
-			compilations[target] = c
-		}
+func bundle(inputFiles []string) *lxn.Catalog {
+	if len(inputFiles) == 0 {
+		return nil
 	}
 
-	// write binaries
-	for target, c := range compilations {
-		f, err := os.Create(filepath.Join(conf.outputPath, target))
+	locale := ""
+	messages := make([]lxn.Message, 0, 128)
+	for _, inputFile := range inputFiles {
+		f, err := os.Open(inputFile)
 		if err != nil {
 			fatalf("%v", err)
 		}
-		_, err = f.Write(c.bin)
+
+		cat := &lxn.Catalog{}
+		err = msgpack.Decode(f, cat)
 		f.Close()
-		if err != nil {
-			fatalf("error writing %s: %v", target, err)
+		switch {
+		case err != nil:
+			fatalf("unable to decode catalog file %q", inputFile)
+		case locale != "" && cat.LocaleID != locale:
+			fatalf("multiple locales detected: %s and %s", locale, cat.LocaleID)
 		}
+
+		locale = cat.LocaleID
+		messages = append(messages, cat.Messages...)
+	}
+
+	return &lxn.Catalog{
+		LocaleID: locale,
+		Messages: messages,
 	}
 }
 
-func compile(loc locale.Locale, filenames []string) (c compilation, err error) {
-	c.files = filenames
-	c.cat, err = lxn.CompileCatalog(loc, filenames...)
-	if err != nil {
-		return c, err
-	}
+type warner struct{}
 
-	var buf bytes.Buffer
-	if err = msgpack.Encode(&buf, c.cat); err != nil {
-		return c, err
-	}
-	c.bin = buf.Bytes()
-
-	lxn.Validate(c.cat, lxn.Validator{
-		Warn: func(msg string) {
-			fmt.Fprintln(os.Stderr, "warning:", msg)
-		},
-	})
-	return c, nil
+func (w warner) Warn(msg string) {
+	fmt.Fprintln(os.Stderr, "warning:", msg)
 }
 
 func fatalf(msg string, args ...any) {
