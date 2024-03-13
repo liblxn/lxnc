@@ -61,12 +61,14 @@ func newNumberFormat(nf locale.NumberFormat) NumberFormat {
 }
 
 func newPlurals(p locale.Plural) []Plural {
-	var res []Plural
-	for _, rules := range p.Rules() {
+	pluralRules := p.Rules()
+	res := make([]Plural, 0, len(pluralRules))
+	for _, rules := range pluralRules {
 		plural := Plural{Category: PluralCategory(rules.Category())}
 		rules.Iter(func(r locale.PluralRule) {
 			plural.Rules = append(plural.Rules, newPluralRule(r))
 		})
+		res = append(res, plural)
 	}
 	return res
 }
